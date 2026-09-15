@@ -1,0 +1,15 @@
+$kind: collection
+name: Boards
+description: |-
+  Board management endpoints under `/api/boards`.
+
+  All endpoints require a valid JWT access token. Login and Register store it in Postman
+  Local Vault, and this folder reads it through `{{vault:access_token}}`.
+
+  **BoardRole** values: `0` = Guest, `1` = Owner.
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{vault:access_token}}'
+order: 2000

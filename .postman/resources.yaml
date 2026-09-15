@@ -1,0 +1,9 @@
+workspace:
+  id: a7349b23-9b86-4eec-8a98-9151b1f0a59c
+cloudResources:
+  collections:
+    ../postman/collections/Lapis API: 40798059-439621fb-425d-430a-951d-88cce5303548
+  environments:
+    ../postman/environments/Lapis Local.environment.yaml: 40798059-9f529035-4081-472e-9099-e7a6b04355ca
+  globals:
+    ../postman/globals/workspace.globals.yaml: e5ae1da7-5867-4647-87de-90e872e14069

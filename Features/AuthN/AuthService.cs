@@ -1,28 +1,21 @@
 namespace Lapis.Features.Auth;
 
-using System.Security.Cryptography;
-using System.Text;
 using Lapis.Features.Auth.DTOs;
 using Lapis.Features.Users;
 using Lapis.Shared.Data.AppDbContext;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
-
-public sealed record AuthSession(
-    AuthResponseDto Response,
-    string RefreshToken,
-    DateTimeOffset RefreshExpiresAt);
 
 public sealed class AuthService(
     LapisDbContext db,
     UserManager<User> userManager,
     SignInManager<User> signInManager,
-    JwtTokenGenerator tokenGenerator,
-    JwtOptions options)
+    SessionIssuer sessionIssuer,
+    TimeProvider timeProvider)
 {
-    public async Task<(AuthSession? Session, string[] Errors)> RegisterAsync(
+    public async Task<(AuthResponseDto? Response, string[] Errors)> RegisterAsync(
         RegisterRequestDto request,
+        HttpResponse response,
         CancellationToken cancellationToken)
     {
         var email = request.Email.Trim();
@@ -35,13 +28,15 @@ public sealed class AuthService(
             return (null, result.Errors.Select(error => error.Description).ToArray());
         }
 
-        var session = await IssueSessionAsync(user, cancellationToken);
+        var session = await sessionIssuer.IssueAsync(user, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
-        return (session, []);
+        sessionIssuer.SetRefreshCookie(response, session);
+        return (session.Response, []);
     }
 
-    public async Task<AuthSession?> LoginAsync(
+    public async Task<AuthResponseDto?> LoginAsync(
         LoginRequestDto request,
+        HttpResponse response,
         CancellationToken cancellationToken)
     {
         var user = await userManager.FindByEmailAsync(request.Email.Trim());
@@ -64,13 +59,15 @@ public sealed class AuthService(
             return null;
         }
 
-        var session = await IssueSessionAsync(lockedUser, cancellationToken);
+        var session = await sessionIssuer.IssueAsync(lockedUser, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
-        return session;
+        sessionIssuer.SetRefreshCookie(response, session);
+        return session.Response;
     }
 
-    public async Task<AuthSession?> RefreshAsync(
+    public async Task<AuthResponseDto?> RefreshAsync(
         string? rawToken,
+        HttpResponse response,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(rawToken))
@@ -78,7 +75,7 @@ public sealed class AuthService(
             return null;
         }
 
-        var hash = HashToken(rawToken);
+        var hash = sessionIssuer.HashRefreshToken(rawToken);
         var existing = await db.RefreshTokens.AsNoTracking()
             .SingleOrDefaultAsync(token => token.TokenHash == hash, cancellationToken);
         if (existing is null)
@@ -93,7 +90,7 @@ public sealed class AuthService(
             return null;
         }
 
-        var now = DateTimeOffset.UtcNow;
+        var now = timeProvider.GetUtcNow();
         var changed = await db.RefreshTokens
             .Where(token => token.Id == existing.Id && !token.IsRevoked && token.ExpiredAt > now)
             .ExecuteUpdateAsync(
@@ -104,9 +101,10 @@ public sealed class AuthService(
             return null;
         }
 
-        var session = await IssueSessionAsync(user, cancellationToken);
+        var session = await sessionIssuer.IssueAsync(user, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
-        return session;
+        sessionIssuer.SetRefreshCookie(response, session);
+        return session.Response;
     }
 
     public async Task LogoutAsync(string? rawToken, CancellationToken cancellationToken)
@@ -116,7 +114,7 @@ public sealed class AuthService(
             return;
         }
 
-        var hash = HashToken(rawToken);
+        var hash = sessionIssuer.HashRefreshToken(rawToken);
         await db.RefreshTokens
             .Where(token => token.TokenHash == hash && !token.IsRevoked)
             .ExecuteUpdateAsync(
@@ -142,26 +140,6 @@ public sealed class AuthService(
         return changed;
     }
 
-    private async Task<AuthSession> IssueSessionAsync(User user, CancellationToken cancellationToken)
-    {
-        var rawRefreshToken = WebEncoders.Base64UrlEncode(RandomNumberGenerator.GetBytes(64));
-        var refreshExpiresAt = DateTimeOffset.UtcNow.AddDays(options.RefreshTokenDays);
-        db.RefreshTokens.Add(new RefreshToken
-        {
-            UserId = user.Id,
-            TokenHash = HashToken(rawRefreshToken),
-            ExpiredAt = refreshExpiresAt
-        });
-        await db.SaveChangesAsync(cancellationToken);
-
-        var (accessToken, accessExpiresAt) = tokenGenerator.CreateAccessToken(user);
-        var response = new AuthResponseDto(
-            accessToken,
-            accessExpiresAt,
-            new UserSummaryDto(user.Id, user.Email ?? string.Empty));
-        return new AuthSession(response, rawRefreshToken, refreshExpiresAt);
-    }
-
     private Task<User?> LockUserAsync(Guid userId, CancellationToken cancellationToken) =>
         db.Users
             // The user-row lock serializes refresh rotation with logout-everywhere.
@@ -169,7 +147,4 @@ public sealed class AuthService(
             .FromSqlInterpolated($"SELECT * FROM asp_net_users WHERE id = {userId} FOR UPDATE")
             .AsNoTracking()
             .SingleOrDefaultAsync(cancellationToken);
-
-    private static string HashToken(string token) =>
-        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
 }

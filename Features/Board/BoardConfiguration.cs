@@ -9,7 +9,9 @@ public class BoardConfiguration : IEntityTypeConfiguration<Board>
     {
         entity.HasKey(board => board.Id);
         entity.HasIndex(board => board.Title);
-        entity.Property(board => board.Title).IsRequired();
+        entity.Property(board => board.Title)
+              .IsRequired()
+              .HasMaxLength(200);
         entity.Property(board => board.CreatedAt).HasDefaultValueSql("now()");
     }
 }
@@ -28,6 +30,9 @@ public class BoardMembershipConfiguration : IEntityTypeConfiguration<BoardMember
         entity.ToTable(table => table.HasCheckConstraint(
             "ck_board_membership_role",
             "\"role\" IN (0, 1)"));
+        entity.ToTable(table => table.HasCheckConstraint(
+            "ck_board_membership_owner_can_edit",
+            "\"role\" <> 1 OR \"can_edit\""));
 
         entity.HasOne(membership => membership.Board)
               .WithMany(board => board.Memberships)

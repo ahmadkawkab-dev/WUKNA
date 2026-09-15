@@ -1,0 +1,12 @@
+$kind: collection
+name: Auth
+description: |-
+  Authentication endpoints under `/api/auth`.
+
+  **CSRF flow**: Every mutating request (`/register`, `/login`, `/refresh`, `/logout`) requires
+  the `X-CSRF-TOKEN` header. Fetch a fresh token first with `GET /api/auth/csrf` — the
+  after-response script on that request stores it as the `csrf_token` Local Vault secret.
+
+  The server issues an `HttpOnly` refresh-token cookie (`lapis.refresh`) scoped to `/api/auth`
+  on successful register/login/refresh. The `/refresh` endpoint reads that cookie — no body needed.
+order: 1000

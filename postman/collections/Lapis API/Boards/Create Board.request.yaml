@@ -1,0 +1,32 @@
+$kind: http-request
+name: 'Create Board'
+method: POST
+url: '{{base_url}}/api/boards'
+order: 3000
+headers:
+  - key: Content-Type
+    value: application/json
+  - key: Accept
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "title": "My New Board"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status is 201 Created", () => pm.response.to.have.status(201));
+
+      if (pm.response.code === 201) {
+          const json = pm.response.json();
+          pm.test("Board has id", () => pm.expect(json).to.have.property("id"));
+          pm.test("Board has title", () => pm.expect(json).to.have.property("title"));
+          pm.test("Board role is Owner (1)", () => pm.expect(json.role).to.equal(1));
+          pm.test("Board canEdit is true", () => pm.expect(json.canEdit).to.be.true);
+
+          pm.environment.set("board_id", json.id);
+          console.log("New board_id stored:", json.id);
+      }

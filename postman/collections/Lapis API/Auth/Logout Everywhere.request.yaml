@@ -1,0 +1,18 @@
+$kind: http-request
+name: 'Logout Everywhere'
+method: POST
+url: '{{base_url}}/api/auth/logout-everywhere'
+order: 6000
+headers:
+  - key: Authorization
+    value: 'Bearer {{vault:access_token}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status is 204 No Content", () => pm.response.to.have.status(204));
+
+      if (pm.response.code === 204) {
+          await pm.vault.unset("access_token");
+          console.log("Logged out everywhere — access token removed from Postman Local Vault.");
+      }

@@ -21,19 +21,14 @@ builder.Services.AddDbContext<LapisDbContext>(options =>
            .UseSnakeCaseNamingConvention());
 
 var jwtOptions = builder.Configuration.GetSection("Jwt").Get<JwtOptions>() ?? new JwtOptions();
-if (string.IsNullOrWhiteSpace(jwtOptions.Issuer) ||
-    string.IsNullOrWhiteSpace(jwtOptions.Audience) ||
-    string.IsNullOrWhiteSpace(jwtOptions.SigningKey) ||
-    Encoding.UTF8.GetByteCount(jwtOptions.SigningKey) < 32 ||
-    jwtOptions.AccessTokenMinutes is < 1 or > 60 ||
-    jwtOptions.RefreshTokenDays is < 1 or > 365)
-{
-    throw new InvalidOperationException(
-        "Configure Jwt:Issuer, Jwt:Audience, a signing key of at least 32 bytes, and valid token lifetimes.");
-}
+// WebApplicationBuilder loads User Secrets automatically in Development.
+// Validate each setting separately so configuration errors identify the exact key to fix.
+ValidateJwtOptions(jwtOptions);
 
 builder.Services.AddSingleton(jwtOptions);
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<JwtTokenGenerator>();
+builder.Services.AddScoped<SessionIssuer>();
 builder.Services.AddScoped<AuthService>();
 
 builder.Services.AddIdentityCore<User>(options =>
@@ -93,3 +88,19 @@ app.MapBoardEndpoints();
 app.MapControllerRoute(name: "default", pattern: "{controller=Health}/{action=Index}/{id?}");
 
 app.Run();
+
+static void ValidateJwtOptions(JwtOptions options)
+{
+    if (string.IsNullOrWhiteSpace(options.Issuer))
+        throw new InvalidOperationException("Jwt:Issuer is required.");
+    if (string.IsNullOrWhiteSpace(options.Audience))
+        throw new InvalidOperationException("Jwt:Audience is required.");
+    if (string.IsNullOrWhiteSpace(options.SigningKey))
+        throw new InvalidOperationException("Jwt:SigningKey is required.");
+    if (Encoding.UTF8.GetByteCount(options.SigningKey) < 32)
+        throw new InvalidOperationException("Jwt:SigningKey must contain at least 32 bytes.");
+    if (options.AccessTokenMinutes is < 1 or > 60)
+        throw new InvalidOperationException("Jwt:AccessTokenMinutes must be between 1 and 60.");
+    if (options.RefreshTokenDays is < 1 or > 365)
+        throw new InvalidOperationException("Jwt:RefreshTokenDays must be between 1 and 365.");
+}
