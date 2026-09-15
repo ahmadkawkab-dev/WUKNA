@@ -1,0 +1,26 @@
+$kind: collection
+name: Lapis API
+description: |-
+  HTTP API collection for the Lapis application — a hybrid board/sticky-note app with JWT authentication.
+
+  **Base URL**: `{{base_url}}` (default: http://localhost:8080)
+
+  ## Authentication flow
+  1. In Postman Local Vault, create `test_password` for the test user's password.
+  2. Enable vault support in scripts and grant this collection access to the vault.
+  3. Fetch a CSRF token via `GET /api/auth/csrf`; its script stores it as the
+     `csrf_token` vault secret.
+  4. Register or log in — the server sets an `HttpOnly` refresh-token cookie automatically,
+     and the response script stores the JWT as the `access_token` vault secret.
+  5. Board requests read that secret with `{{vault:access_token}}`.
+
+  Select the `Lapis Local` environment for `base_url`, `test_email`, `guest_email`,
+  `board_id`, and `guest_id`. Vault secrets stay local and aren't committed with this collection.
+
+  **Runner limitation**: `pm.vault` scripts work in manual Postman app runs. Postman CLI,
+  Newman, monitors, and scheduled collection runs don't support them.
+
+  ## CSRF protection
+  All mutating Auth endpoints (`/register`, `/login`, `/refresh`, `/logout`) require the
+  `X-CSRF-TOKEN` header populated from the `csrf_token` vault secret returned by
+  `GET /api/auth/csrf`.

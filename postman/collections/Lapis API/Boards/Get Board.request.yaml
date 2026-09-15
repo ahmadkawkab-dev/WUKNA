@@ -1,0 +1,24 @@
+$kind: http-request
+name: 'Get Board'
+method: GET
+url: '{{base_url}}/api/boards/{{board_id}}'
+order: 2000
+headers:
+  - key: Accept
+    value: application/json
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status is 200 or 404", () => {
+          pm.expect(pm.response.code).to.be.oneOf([200, 404]);
+      });
+
+      if (pm.response.code === 200) {
+          const json = pm.response.json();
+          pm.test("Board has id", () => pm.expect(json).to.have.property("id"));
+          pm.test("Board has title", () => pm.expect(json).to.have.property("title"));
+          pm.test("Board has createdAt", () => pm.expect(json).to.have.property("createdAt"));
+          pm.test("Board has role", () => pm.expect(json).to.have.property("role"));
+          pm.test("Board has canEdit", () => pm.expect(json).to.have.property("canEdit"));
+      }

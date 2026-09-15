@@ -1,0 +1,22 @@
+name: Lapis Local
+values:
+  - key: base_url
+    value: 'http://localhost:8080'
+    enabled: true
+    type: default
+  - key: test_email
+    value: 'user@example.com'
+    enabled: true
+    type: default
+  - key: guest_email
+    value: 'guest@example.com'
+    enabled: true
+    type: default
+  - key: board_id
+    value: ''
+    enabled: true
+    type: default
+  - key: guest_id
+    value: ''
+    enabled: true
+    type: default

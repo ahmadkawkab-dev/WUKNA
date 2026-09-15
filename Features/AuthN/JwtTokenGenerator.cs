@@ -6,11 +6,11 @@ using System.Text;
 using Lapis.Features.Users;
 using Microsoft.IdentityModel.Tokens;
 
-public sealed class JwtTokenGenerator(JwtOptions options)
+public sealed class JwtTokenGenerator(JwtOptions options, TimeProvider timeProvider)
 {
     public (string Token, DateTimeOffset ExpiresAt) CreateAccessToken(User user)
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = timeProvider.GetUtcNow();
         var expiresAt = now.AddMinutes(options.AccessTokenMinutes);
         var claims = new[]
         {

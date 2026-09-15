@@ -1,0 +1,23 @@
+$kind: http-request
+name: 'Get CSRF Token'
+method: GET
+url: '{{base_url}}/api/auth/csrf'
+order: 1000
+headers:
+  - key: Accept
+    value: application/json
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      const json = pm.response.json();
+      if (pm.response.code === 200 && json.token) {
+          await pm.vault.set("csrf_token", json.token);
+          console.log("CSRF token stored in Postman Local Vault.");
+      }
+
+      pm.test("Status is 200", () => pm.response.to.have.status(200));
+      pm.test("Response has token field", () => {
+          pm.expect(json).to.have.property("token");
+          pm.expect(json.token).to.be.a("string").and.not.empty;
+      });

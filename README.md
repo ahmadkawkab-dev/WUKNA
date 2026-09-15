@@ -34,6 +34,8 @@ Board, note, connection, and authentication models are in place. The initial EF 
 
 Set `Jwt__SigningKey` to a secret of at least 32 bytes before starting the API. Keep it outside source control. The configured access token lifetime is five minutes; refresh credentials last 30 days and are stored only as hashes in PostgreSQL.
 
+For local development, `dotnet run` uses `Properties/launchSettings.json` to select the `Development` environment. ASP.NET Core then loads the project's User Secrets automatically. Store the local signing key as `Jwt:SigningKey`; environment-based deployments use the equivalent `Jwt__SigningKey` name.
+
 The browser calls `GET /api/auth/csrf` with credentials enabled, then sends the returned token in `X-CSRF-TOKEN` for `POST /api/auth/register`, `/login`, `/refresh`, and `/logout`. Register and login return a JWT access token in JSON and set an HttpOnly refresh cookie. Keep the access token in memory and send it as `Authorization: Bearer <token>` on protected API calls. Refresh rotates the cookie and returns a new access token. The React helper in `frontend/src/auth.ts` implements this flow.
 
 `POST /api/auth/logout-everywhere` requires a bearer access token and revokes every active refresh credential for that user. Existing access tokens remain usable until their five-minute expiry. Board roles are deliberately absent from JWTs; board endpoints must check current membership in the database.

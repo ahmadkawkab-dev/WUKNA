@@ -1,0 +1,14 @@
+$kind: http-request
+name: 'Health Check'
+method: GET
+url: '{{base_url}}/health'
+order: 1000
+headers:
+  - key: Accept
+    value: application/json
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status is 200", () => pm.response.to.have.status(200));
+      pm.test("Response time under 500ms", () => pm.expect(pm.response.responseTime).to.be.below(500));

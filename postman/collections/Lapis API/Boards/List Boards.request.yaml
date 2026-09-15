@@ -1,0 +1,31 @@
+$kind: http-request
+name: 'List Boards'
+method: GET
+url: '{{base_url}}/api/boards'
+order: 1000
+headers:
+  - key: Accept
+    value: application/json
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status is 200", () => pm.response.to.have.status(200));
+
+      if (pm.response.code === 200) {
+          const json = pm.response.json();
+          pm.test("Response is an array", () => pm.expect(json).to.be.an("array"));
+
+          if (json.length > 0) {
+              const board = json[0];
+              pm.test("Board has id", () => pm.expect(board).to.have.property("id"));
+              pm.test("Board has title", () => pm.expect(board).to.have.property("title"));
+              pm.test("Board has createdAt", () => pm.expect(board).to.have.property("createdAt"));
+              pm.test("Board has role", () => pm.expect(board).to.have.property("role"));
+              pm.test("Board has canEdit", () => pm.expect(board).to.have.property("canEdit"));
+
+              // Store first board id for use in other requests
+              pm.environment.set("board_id", board.id);
+              console.log("board_id set to:", board.id);
+          }
+      }

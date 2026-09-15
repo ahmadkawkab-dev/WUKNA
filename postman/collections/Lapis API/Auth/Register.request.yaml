@@ -1,0 +1,40 @@
+$kind: http-request
+name: Register
+method: POST
+url: '{{base_url}}/api/auth/register'
+order: 2000
+headers:
+  - key: Content-Type
+    value: application/json
+  - key: Accept
+    value: application/json
+  - key: X-CSRF-TOKEN
+    value: '{{vault:csrf_token}}'
+body:
+  type: json
+  content: |-
+    {
+      "email": "{{test_email}}",
+      "password": "{{vault:test_password}}"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status is 200", () => pm.response.to.have.status(200));
+
+      if (pm.response.code === 200) {
+          const json = pm.response.json();
+          pm.test("Response has accessToken", () => {
+              pm.expect(json).to.have.property("accessToken");
+              pm.expect(json.accessToken).to.be.a("string").and.not.empty;
+          });
+          pm.test("Response has expiresAt", () => pm.expect(json).to.have.property("expiresAt"));
+          pm.test("Response has user object", () => {
+              pm.expect(json).to.have.property("user");
+              pm.expect(json.user).to.have.property("id");
+              pm.expect(json.user).to.have.property("email");
+          });
+          await pm.vault.set("access_token", json.accessToken);
+          console.log("Access token stored in Postman Local Vault after register.");
+      }
