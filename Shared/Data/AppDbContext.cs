@@ -22,6 +22,7 @@ public class LapisDbContext : IdentityUserContext<User, Guid>
     public DbSet<Note> Notes  => Set<Note>();
     public DbSet<NoteConnection> NoteConnections => Set<NoteConnection>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<ExternalLoginGrant> ExternalLoginGrants => Set<ExternalLoginGrant>();
 
 
 protected override void OnModelCreating(ModelBuilder builder)

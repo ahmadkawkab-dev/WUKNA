@@ -4,9 +4,21 @@ export type AuthSession = {
   user: { id: string; email: string }
 }
 
+export class AuthApiError extends Error {
+  constructor(public readonly code: string) {
+    super(code)
+  }
+}
+
 let session: AuthSession | null = null
 let csrfToken: string | null = null
 let refreshInFlight: Promise<AuthSession | null> | null = null
+let externalExchangeInFlight: Promise<AuthSession> | null = null
+
+async function errorFromResponse(response: Response): Promise<AuthApiError> {
+  const body: { error?: string } = await response.json().catch(() => ({}))
+  return new AuthApiError(body.error ?? 'authentication_failed')
+}
 
 async function getCsrfToken(): Promise<string> {
   if (csrfToken) return csrfToken
@@ -26,7 +38,7 @@ async function startSession(path: string, email: string, password: string): Prom
     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': await getCsrfToken() },
     body: JSON.stringify({ email, password }),
   })
-  if (!response.ok) throw new Error('Authentication failed.')
+  if (!response.ok) throw await errorFromResponse(response)
 
   session = await response.json()
   return session!
@@ -38,6 +50,40 @@ export function register(email: string, password: string): Promise<AuthSession> 
 
 export function login(email: string, password: string): Promise<AuthSession> {
   return startSession('/api/auth/login', email, password)
+}
+
+export function startGoogleLogin(): void {
+  window.location.assign('/api/auth/external/google')
+}
+
+export function exchangeGoogleCode(code: string): Promise<AuthSession> {
+  // React Strict Mode may run a callback effect twice in development. Both callers must
+  // share one request because the database grant is deliberately single-use.
+  externalExchangeInFlight ??= (async () => {
+    const response = await fetch('/api/auth/external/exchange', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    })
+    if (!response.ok) throw await errorFromResponse(response)
+
+    session = await response.json()
+    return session!
+  })()
+  return externalExchangeInFlight
+}
+
+export async function startGoogleLink(): Promise<void> {
+  const response = await apiFetch('/api/auth/external/google/link-intent', { method: 'POST' })
+  if (!response.ok) throw await errorFromResponse(response)
+  // The backend derives the user from our JWT before browser navigation starts.
+  window.location.assign('/api/auth/external/google/link')
+}
+
+export async function unlinkGoogle(): Promise<void> {
+  const response = await apiFetch('/api/auth/external/google/link', { method: 'DELETE' })
+  if (!response.ok) throw await errorFromResponse(response)
 }
 
 export async function restoreSession(): Promise<AuthSession | null> {

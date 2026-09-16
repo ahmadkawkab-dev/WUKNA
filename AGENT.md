@@ -48,5 +48,5 @@ When doing feature/implementation work, structure the response as:
 
 _Update this section as milestones/slices are completed, so future agent sessions pick up context instead of re-deriving it._
 
-- Current milestone/slice: Owner will create and review the initial EF migration. Note CRUD and per-note authorization are future slices.
-- Completed milestones/slices: Board membership model (owner/guest with guest edit permission), self-referencing notes and checklist items with `xmin` concurrency, typed note connections, JWT access-token and rotating refresh-cookie authentication, user-wide refresh-token revocation, membership-gated board list/detail/create/guest endpoints, and global snake_case PostgreSQL naming. No migration files are retained in the repo.
+- Current milestone/slice: Google OAuth code is implemented; a real provider round trip awaits a configured Google client secret. Note CRUD and per-note authorization are future slices.
+- Completed milestones/slices: Board membership model (owner/guest with guest edit permission), self-referencing notes and checklist items with `xmin` concurrency, typed note connections, JWT access-token and rotating refresh-cookie authentication, user-wide refresh-token revocation, membership-gated board list/detail/create/guest endpoints, global snake_case PostgreSQL naming, two applied migrations, one-time Google exchange, protected explicit linking, safe unlinking, and React authentication screens.
