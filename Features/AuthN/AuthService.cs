@@ -5,6 +5,12 @@ using Lapis.Features.Users;
 using Lapis.Shared.Data.AppDbContext;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
+
+public sealed record RegistrationResult(
+    AuthResponseDto? Response,
+    string? ErrorCode,
+    string[] ValidationErrors);
 
 public sealed class AuthService(
     LapisDbContext db,
@@ -13,25 +19,54 @@ public sealed class AuthService(
     SessionIssuer sessionIssuer,
     TimeProvider timeProvider)
 {
-    public async Task<(AuthResponseDto? Response, string[] Errors)> RegisterAsync(
+    public const string EmailAlreadyRegistered = "email_already_registered";
+
+    public async Task<RegistrationResult> RegisterAsync(
         RegisterRequestDto request,
         HttpResponse response,
         CancellationToken cancellationToken)
     {
         var email = request.Email.Trim();
+
+        // This gives the normal duplicate-registration path a stable response before attempting
+        // an insert. The unique normalized-email index remains the final concurrency safeguard.
+        if (await userManager.FindByEmailAsync(email) is not null)
+        {
+            return new RegistrationResult(null, EmailAlreadyRegistered, []);
+        }
+
         var user = new User { UserName = email, Email = email };
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-        var result = await userManager.CreateAsync(user, request.Password);
+        IdentityResult result;
+        try
+        {
+            result = await userManager.CreateAsync(user, request.Password);
+        }
+        catch (DbUpdateException exception) when (IsEmailUniquenessViolation(exception))
+        {
+            // A concurrent request inserted the same normalized email after our initial check.
+            return new RegistrationResult(null, EmailAlreadyRegistered, []);
+        }
+
         if (!result.Succeeded)
         {
-            return (null, result.Errors.Select(error => error.Description).ToArray());
+            if (result.Errors.Any(error =>
+                    error.Code is "DuplicateEmail" or "DuplicateUserName"))
+            {
+                return new RegistrationResult(null, EmailAlreadyRegistered, []);
+            }
+
+            return new RegistrationResult(
+                null,
+                null,
+                result.Errors.Select(error => error.Description).ToArray());
         }
 
         var session = await sessionIssuer.IssueAsync(user, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         sessionIssuer.SetRefreshCookie(response, session);
-        return (session.Response, []);
+        return new RegistrationResult(session.Response, null, []);
     }
 
     public async Task<AuthResponseDto?> LoginAsync(
@@ -147,4 +182,11 @@ public sealed class AuthService(
             .FromSqlInterpolated($"SELECT * FROM asp_net_users WHERE id = {userId} FOR UPDATE")
             .AsNoTracking()
             .SingleOrDefaultAsync(cancellationToken);
+
+    private static bool IsEmailUniquenessViolation(DbUpdateException exception) =>
+        exception.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation,
+            ConstraintName: "EmailIndex" or "UserNameIndex"
+        };
 }

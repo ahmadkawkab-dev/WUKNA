@@ -14,6 +14,7 @@ public sealed record BoardSummaryDto(
     DateTimeOffset CreatedAt,
     BoardRole Role,
     bool CanEdit);
+public sealed record BoardMemberDto(Guid UserId, string Email, BoardRole Role, bool CanEdit);
 
 public static class BoardEndpoints
 {
@@ -81,6 +82,23 @@ public static class BoardEndpoints
 
             var response = new BoardSummaryDto(board.Id, board.Title, board.CreatedAt, BoardRole.Owner, true);
             return Results.Created($"/api/boards/{board.Id}", response);
+        });
+
+        group.MapGet("/{boardId:guid}/members", async (
+            Guid boardId, HttpContext context, LapisDbContext db,
+            CancellationToken cancellationToken) =>
+        {
+            if (!TryGetUserId(context, out var userId)) return Results.Unauthorized();
+            if (!await db.BoardMemberships.AnyAsync(m => m.BoardId == boardId &&
+                    m.UserId == userId, cancellationToken)) return Results.NotFound();
+
+            var members = await db.BoardMemberships.AsNoTracking()
+                .Where(m => m.BoardId == boardId)
+                .OrderByDescending(m => m.Role).ThenBy(m => m.User.Email)
+                .Select(m => new BoardMemberDto(m.UserId, m.User.Email ?? "", m.Role,
+                    m.Role == BoardRole.Owner || m.CanEdit))
+                .ToListAsync(cancellationToken);
+            return Results.Ok(members);
         });
 
         group.MapPut("/{boardId:guid}/guests", async (
