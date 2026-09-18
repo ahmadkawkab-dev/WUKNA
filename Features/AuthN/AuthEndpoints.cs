@@ -24,6 +24,24 @@ public static class AuthEndpoints
             return Results.Ok(new { token = tokens.RequestToken });
         });
 
+        group.MapGet("/account", async (HttpContext context, UserManager<User> userManager) =>
+        {
+            var subject = context.User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+            if (!Guid.TryParse(subject, out var userId)) return Results.Unauthorized();
+
+            var user = await userManager.FindByIdAsync(userId.ToString());
+            if (user is null) return Results.Unauthorized();
+
+            var logins = await userManager.GetLoginsAsync(user);
+            return Results.Ok(new
+            {
+                user.Id,
+                user.Email,
+                HasPassword = await userManager.HasPasswordAsync(user),
+                ExternalLogins = logins.Select(login => login.LoginProvider).Distinct().ToArray()
+            });
+        }).RequireAuthorization();
+
         group.MapGet("/external/google", (SignInManager<User> signInManager) =>
         {
             // Identity records the provider and protects the redirect through OAuth state and

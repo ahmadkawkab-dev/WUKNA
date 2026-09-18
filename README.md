@@ -22,15 +22,27 @@ LAPIS is under active development. The backend currently provides:
 - Self-referencing notes for top-level notes, lists, and checklist items.
 - Typed note connections for related and prerequisite relationships.
 - PostgreSQL `xmin` optimistic concurrency for collaborative note editing.
+- Board-scoped note CRUD with membership/edit authorization and version checks.
+- Board member listing and board-scoped note-connection endpoints.
 - Global `snake_case` PostgreSQL naming.
 
 Google OAuth login, one-time exchange, explicit account linking, safe unlinking, and the React
 callback are implemented. The development database contains the second migration. Disposable
-HTTP tests cover the application session lifecycle and link/unlink safeguards; a real Google
-round trip remains to be verified with a configured Google client secret.
+HTTP tests cover the application session lifecycle and link/unlink safeguards. The first live
+Google OAuth login completed and issued a LAPIS session; returning login and linking cases remain
+for frontend integration verification.
 
-The React application has local and Google sign-in screens. The board canvas and product UI
-have not been built yet.
+The React application has local and Google sign-in, session restoration, a board canvas backed by
+the API, checklist tasks, persisted note connections, and board sharing. Board chat is visibly
+unavailable until its persistent backend slice exists.
+
+Canvas dragging and resizing update locally during pointer movement and save once on release.
+Color changes preview immediately and revert if persistence fails. Mutations of each versioned
+note are queued so rapid edits use the latest server version; a genuine conflict offers a path
+to load the latest note. Connections are created only by dragging from a note's connection handle
+to another note. Task-list titles and checklist items are separate, inline-editable notes.
+The account menu reads linked providers from the authenticated account endpoint before showing
+Google link or unlink controls.
 
 ## Architecture
 
@@ -155,10 +167,10 @@ npm run dev
 
 Vite runs on `http://localhost:5173` and proxies `/api` to the backend at
 `http://localhost:8080`. The frontend stores access tokens only in memory; refresh credentials
-remain in an HttpOnly cookie.
-
-The current Nginx configuration serves the compiled frontend only. API reverse proxying and the
-production deployment topology still need to be added.
+remain in an HttpOnly cookie. In production, serve the frontend and `/api` through a shared
+origin with an API reverse proxy. The checked-in Nginx file currently serves static assets only;
+configure its API upstream for your deployment before publishing. No `VITE_*` secret or direct
+cross-origin API URL is needed for the current same-origin design.
 
 ## Authentication lifecycle
 
@@ -188,6 +200,7 @@ An AuthN background worker removes expired exchange grants in bounded hourly bat
 GET    /health
 
 GET    /api/auth/csrf
+GET    /api/auth/account
 POST   /api/auth/register
 POST   /api/auth/login
 GET    /api/auth/external/google
@@ -206,10 +219,28 @@ GET    /api/boards/{boardId}
 POST   /api/boards
 PUT    /api/boards/{boardId}/guests
 DELETE /api/boards/{boardId}/guests/{guestId}
+GET    /api/boards/{boardId}/members
+
+GET    /api/boards/{boardId}/notes
+POST   /api/boards/{boardId}/notes
+GET    /api/boards/{boardId}/notes/{noteId}
+PATCH  /api/boards/{boardId}/notes/{noteId}
+DELETE /api/boards/{boardId}/notes/{noteId}
+
+GET    /api/boards/{boardId}/connections
+POST   /api/boards/{boardId}/connections
+DELETE /api/boards/{boardId}/connections/{connectionId}
 ```
 
 All board routes require a JWT. Listing and detail queries begin from `BoardMembership`, so users
 cannot see boards they haven't joined.
+
+Note reads require board membership. Mutations require owner access or guest edit permission.
+`PATCH` and `DELETE` require `If-Match: "<version>"` from a note response; stale versions return
+`409 note_version_conflict`. A list note must have its checklist items removed before deletion.
+Connections are restricted to top-level notes on the same board; reads require membership and
+mutations require edit permission. Member listing requires board membership, and guest management
+remains owner-only.
 
 ## Database and migrations
 
@@ -245,7 +276,7 @@ the address bar before exchanging it.
 | Local-email collision | Register locally, sign out, then use Google with that email. | `account_link_required`; no automatic Google link. |
 | Explicit link | Sign in locally, choose **Link Google**, and approve Google. | Google links to the signed-in LAPIS user; the callback returns `linked=google`. |
 | Provider already owned | Try linking a Google identity already linked to another user. | `external_login_already_linked`; ownership does not move. |
-| Google-only unlink | Sign in to an account created through Google and choose **Remove Google login**. | `cannot_remove_only_login`; the provider link remains. |
+| Google-only unlink | Sign in to an account created through Google and open Account. | **Only sign-in method** is shown without a remove action; a direct unlink request still returns `cannot_remove_only_login`. |
 | Password-account unlink | Link Google to a password account, then remove it. | Link is removed and password login still works. |
 | Cancellation | Cancel at Google's consent screen. | `oauth_cancelled`; no session or grant is issued. |
 | Refresh and logout | After Google login, refresh, sign out, and attempt refresh again. | Refresh rotates; logout revokes the refresh cookie; the later refresh fails. |
@@ -260,10 +291,9 @@ with disposable local fixtures.
 
 ## Roadmap
 
-- Verify Google login and linking with a real Google OAuth client.
-- Add note and connection endpoints with membership-based authorization.
-- Build the React board canvas.
-- Add real-time collaborative editing and board chat.
+- Verify remaining Google login and linking cases with the real provider.
+- Add automated coverage for the integrated board flows verified manually with disposable local accounts.
+- Add persistent board chat and real-time collaborative updates.
 - Add containerization, Nginx API proxying, deployment, and operational documentation. Multiple
   API replicas must share the ASP.NET Core Data Protection key ring for OAuth state, external
   cookies, and link intents.

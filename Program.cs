@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Lapis.Features.Auth;
 using Lapis.Features.Board;
+using Lapis.Features.Notes;
+using Lapis.Features.NoteConnection;
 using Lapis.Features.Users;
 using Lapis.Shared.Data.AppDbContext;
 using Microsoft.AspNetCore.Authentication;
@@ -153,6 +155,8 @@ app.UseAuthorization();
 app.MapHealthChecks("/health");
 app.MapAuthEndpoints();
 app.MapBoardEndpoints();
+app.MapNoteEndpoints();
+app.MapNoteConnectionEndpoints();
 
 app.MapControllerRoute(name: "default", pattern: "{controller=Health}/{action=Index}/{id?}");
 

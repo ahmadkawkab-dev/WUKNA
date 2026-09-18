@@ -1,0 +1,222 @@
+import { apiFetch, AuthApiError } from "./auth";
+
+export { AuthApiError };
+
+export type BoardDto = {
+  id: string;
+  title: string;
+  createdAt: string;
+  role: 0 | 1;
+  canEdit: boolean;
+};
+export type MemberDto = {
+  userId: string;
+  email: string;
+  role: 0 | 1;
+  canEdit: boolean;
+};
+export type NoteDto = {
+  id: string;
+  boardId: string;
+  kind: 0 | 1 | 2;
+  parentNoteId: string | null;
+  title: string;
+  content: string;
+  positionX: number | null;
+  positionY: number | null;
+  width: number;
+  height: number;
+  zIndex: number;
+  color: string;
+  isCompleted: boolean;
+  createdAt: string;
+  version: number;
+};
+export type ConnectionDto = {
+  id: string;
+  boardId: string;
+  sourceNoteId: string;
+  targetNoteId: string;
+  type: 0 | 1;
+  createdAt: string;
+};
+
+type CreateNote = {
+  kind: 0 | 1 | 2;
+  title: string;
+  content?: string;
+  parentNoteId?: string;
+  positionX?: number;
+  positionY?: number;
+  color?: string;
+};
+export type PatchNote = Partial<
+  Pick<
+    NoteDto,
+    | "title"
+    | "content"
+    | "positionX"
+    | "positionY"
+    | "width"
+    | "height"
+    | "zIndex"
+    | "color"
+    | "isCompleted"
+  >
+>;
+
+async function request<T>(
+  path: string,
+  method = "GET",
+  body?: object,
+  version?: number,
+): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (version !== undefined) headers["If-Match"] = `"${version}"`;
+  let response: Response;
+  try {
+    response = await apiFetch(path, {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  } catch (error) {
+    if (error instanceof AuthApiError) throw error;
+    throw new AuthApiError("network_failure", 0);
+  }
+  if (!response.ok) {
+    const payload: { error?: string; errors?: string[] } = await response
+      .json()
+      .catch(() => ({}));
+    throw new AuthApiError(
+      payload.error ?? codeForStatus(response.status),
+      response.status,
+      payload.errors,
+    );
+  }
+  if (response.status === 204) return undefined as T;
+  return response.json() as Promise<T>;
+}
+
+function codeForStatus(status: number): string {
+  return (
+    (
+      {
+        400: "invalid_request",
+        401: "unauthenticated",
+        403: "forbidden",
+        404: "not_found",
+        409: "conflict",
+      } as Record<number, string>
+    )[status] ?? "server_error"
+  );
+}
+
+export function errorMessage(error: unknown): string {
+  if (!(error instanceof AuthApiError))
+    return "Could not connect to LAPIS. Try again.";
+  const messages: Record<string, string> = {
+    network_failure:
+      "Could not reach LAPIS. Check your connection and try again.",
+    unauthenticated: "Your session expired. Please sign in again.",
+    invalid_credentials: "Email or password is incorrect.",
+    forbidden: "You do not have permission to make this change.",
+    not_found: "This item is unavailable or you no longer have access.",
+    note_version_conflict:
+      "This note was modified by another board member. View the latest version before editing again.",
+    note_has_checklist_items:
+      "Remove the checklist items before deleting this list.",
+    email_already_registered:
+      "This email is already registered. Sign in instead.",
+    account_link_required:
+      "This email has a local account. Sign in and link Google from your account.",
+    oauth_cancelled: "Google sign-in was cancelled.",
+    external_login_failed: "Google sign-in could not be completed. Please try again.",
+    external_login_code_invalid: "Google sign-in is no longer valid. Please try again.",
+    external_login_code_expired: "Google sign-in expired. Please try again.",
+    external_login_already_linked: "That Google account is already linked.",
+    cannot_remove_only_login:
+      "Google is your only sign-in method and cannot be removed.",
+    connection_exists: "Those notes are already connected.",
+    invalid_connection: "Select two different notes and a supported relationship.",
+    invalid_connection_notes: "Connections must join notes on this board.",
+    invalid_note_title: "Note titles must contain 1 to 200 characters.",
+    invalid_note_kind: "Choose a supported note type.",
+    invalid_note_dimensions: "Note dimensions must be positive numbers.",
+    invalid_note_color: "Choose a valid note color.",
+    invalid_note_parent: "The checklist parent must be a task list on this board.",
+    invalid_note_parent_or_position:
+      "Choose a valid parent and position for this note.",
+    invalid_note_position: "This note cannot be moved.",
+    note_version_required: "Reload this note before editing it.",
+    invalid_note_version: "Reload this note before editing it.",
+  };
+  if (error.details.length) return error.details.join(" ");
+  if (messages[error.code]) return messages[error.code];
+  if (error.code.includes(" ") || error.code.includes(".")) return error.code;
+  if (error.status >= 500)
+    return "LAPIS had a server error. Try again shortly.";
+  return "The request could not be completed. Try again.";
+}
+
+const boards = "/api/boards";
+const board = (id: string) => `${boards}/${encodeURIComponent(id)}`;
+const notes = (id: string) => `${board(id)}/notes`;
+const connections = (id: string) => `${board(id)}/connections`;
+
+export const boardApi = {
+  list: () => request<BoardDto[]>(boards),
+  get: (id: string) => request<BoardDto>(board(id)),
+  create: (title: string) => request<BoardDto>(boards, "POST", { title }),
+  members: (id: string) => request<MemberDto[]>(`${board(id)}/members`),
+  setGuest: (id: string, email: string, canEdit: boolean) =>
+    request<void>(`${board(id)}/guests`, "PUT", { email, canEdit }),
+  removeGuest: (id: string, userId: string) =>
+    request<void>(
+      `${board(id)}/guests/${encodeURIComponent(userId)}`,
+      "DELETE",
+    ),
+};
+
+export const noteApi = {
+  list: (id: string) => request<NoteDto[]>(notes(id)),
+  get: (id: string, noteId: string) =>
+    request<NoteDto>(`${notes(id)}/${encodeURIComponent(noteId)}`),
+  create: (id: string, payload: CreateNote) =>
+    request<NoteDto>(notes(id), "POST", payload),
+  patch: (id: string, noteId: string, version: number, payload: PatchNote) =>
+    request<NoteDto>(
+      `${notes(id)}/${encodeURIComponent(noteId)}`,
+      "PATCH",
+      payload,
+      version,
+    ),
+  remove: (id: string, noteId: string, version: number) =>
+    request<void>(
+      `${notes(id)}/${encodeURIComponent(noteId)}`,
+      "DELETE",
+      undefined,
+      version,
+    ),
+};
+
+export const connectionApi = {
+  list: (id: string) => request<ConnectionDto[]>(connections(id)),
+  create: (
+    id: string,
+    sourceNoteId: string,
+    targetNoteId: string,
+    type: 0 | 1,
+  ) =>
+    request<ConnectionDto>(connections(id), "POST", {
+      sourceNoteId,
+      targetNoteId,
+      type,
+    }),
+  remove: (id: string, connectionId: string) =>
+    request<void>(
+      `${connections(id)}/${encodeURIComponent(connectionId)}`,
+      "DELETE",
+    ),
+};
