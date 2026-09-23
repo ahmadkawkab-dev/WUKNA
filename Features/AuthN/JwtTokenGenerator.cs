@@ -1,9 +1,9 @@
-namespace Lapis.Features.Auth;
+namespace Wukna.Features.Auth;
 
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using Lapis.Features.Users;
+using Wukna.Features.Users;
 using Microsoft.IdentityModel.Tokens;
 
 public sealed class JwtTokenGenerator(JwtOptions options, TimeProvider timeProvider)

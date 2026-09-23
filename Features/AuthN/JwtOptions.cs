@@ -1,4 +1,4 @@
-namespace Lapis.Features.Auth;
+namespace Wukna.Features.Auth;
 
 public sealed class JwtOptions
 {

@@ -1,6 +1,6 @@
-namespace Lapis.Features.Auth;
+namespace Wukna.Features.Auth;
 
-using Lapis.Features.Users;
+using Wukna.Features.Users;
 
 public class RefreshToken
 {

@@ -2,18 +2,54 @@ import { apiFetch, AuthApiError } from "./auth";
 
 export { AuthApiError };
 
-export type BoardDto = {
+export type BoardDetailDto = {
   id: string;
   title: string;
   createdAt: string;
+  updatedAt: string;
   role: 0 | 1;
   canEdit: boolean;
+};
+export type BoardPreviewNodeDto = {
+  id: string;
+  type: 0 | 1;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  color: string;
+};
+export type BoardPreviewConnectionDto = {
+  sourceId: string;
+  targetId: string;
+  type: 0 | 1;
+};
+export type BoardListItemDto = BoardDetailDto & {
+  noteCount: number;
+  taskListCount: number;
+  taskItemCount: number;
+  completedTaskItemCount: number;
+  memberCount: number;
+  previewNodes: BoardPreviewNodeDto[];
+  previewConnections: BoardPreviewConnectionDto[];
 };
 export type MemberDto = {
   userId: string;
   email: string;
+  username: string;
+  displayName: string | null;
+  profileImageUrl: string | null;
+  profileImageVersion: string | null;
   role: 0 | 1;
   canEdit: boolean;
+};
+export type ProfileDto = {
+  userId: string;
+  username: string;
+  displayName: string | null;
+  email: string;
+  profileImageUrl: string | null;
+  profileImageVersion: string | null;
 };
 export type NoteDto = {
   id: string;
@@ -86,11 +122,11 @@ async function request<T>(
     throw new AuthApiError("network_failure", 0);
   }
   if (!response.ok) {
-    const payload: { error?: string; errors?: string[] } = await response
+    const payload: { error?: string; code?: string; errors?: string[] } = await response
       .json()
       .catch(() => ({}));
     throw new AuthApiError(
-      payload.error ?? codeForStatus(response.status),
+      payload.code ?? payload.error ?? codeForStatus(response.status),
       response.status,
       payload.errors,
     );
@@ -115,10 +151,10 @@ function codeForStatus(status: number): string {
 
 export function errorMessage(error: unknown): string {
   if (!(error instanceof AuthApiError))
-    return "Could not connect to LAPIS. Try again.";
+    return "Could not connect to Wukna. Try again.";
   const messages: Record<string, string> = {
     network_failure:
-      "Could not reach LAPIS. Check your connection and try again.",
+      "Could not reach Wukna. Check your connection and try again.",
     unauthenticated: "Your session expired. Please sign in again.",
     invalid_credentials: "Email or password is incorrect.",
     forbidden: "You do not have permission to make this change.",
@@ -151,12 +187,18 @@ export function errorMessage(error: unknown): string {
     invalid_note_position: "This note cannot be moved.",
     note_version_required: "Reload this note before editing it.",
     invalid_note_version: "Reload this note before editing it.",
+    username_taken: "That username is already in use.",
+    invalid_username: "Use 3–30 letters, numbers, periods, underscores, or hyphens.",
+    display_name_too_long: "Display name must be 80 characters or fewer.",
+    avatar_too_large: "Profile images must be 5 MB or smaller.",
+    avatar_invalid_type: "Use a JPEG, PNG, or WebP image.",
+    avatar_invalid_image: "Choose a valid JPEG, PNG, or WebP image.",
   };
   if (error.details.length) return error.details.join(" ");
   if (messages[error.code]) return messages[error.code];
   if (error.code.includes(" ") || error.code.includes(".")) return error.code;
   if (error.status >= 500)
-    return "LAPIS had a server error. Try again shortly.";
+    return "Wukna had a server error. Try again shortly.";
   return "The request could not be completed. Try again.";
 }
 
@@ -166,10 +208,15 @@ const notes = (id: string) => `${board(id)}/notes`;
 const connections = (id: string) => `${board(id)}/connections`;
 
 export const boardApi = {
-  list: () => request<BoardDto[]>(boards),
-  get: (id: string) => request<BoardDto>(board(id)),
-  create: (title: string) => request<BoardDto>(boards, "POST", { title }),
+  list: () => request<BoardListItemDto[]>(boards),
+  get: (id: string) => request<BoardDetailDto>(board(id)),
+  create: (title: string) => request<BoardDetailDto>(boards, "POST", { title }),
+  rename: (id: string, title: string) =>
+    request<BoardDetailDto>(board(id), "PATCH", { title }),
+  remove: (id: string) => request<void>(board(id), "DELETE"),
   members: (id: string) => request<MemberDto[]>(`${board(id)}/members`),
+  setMemberPermission: (id: string, userId: string, canEdit: boolean) =>
+    request<void>(`${board(id)}/members/${encodeURIComponent(userId)}`, "PATCH", { canEdit }),
   setGuest: (id: string, email: string, canEdit: boolean) =>
     request<void>(`${board(id)}/guests`, "PUT", { email, canEdit }),
   removeGuest: (id: string, userId: string) =>
@@ -177,6 +224,23 @@ export const boardApi = {
       `${board(id)}/guests/${encodeURIComponent(userId)}`,
       "DELETE",
     ),
+};
+
+export const profileApi = {
+  get: () => request<ProfileDto>("/api/profile"),
+  update: (username: string, displayName: string) =>
+    request<ProfileDto>("/api/profile", "PATCH", { username, displayName }),
+  uploadAvatar: async (file: File) => {
+    const data = new FormData();
+    data.append("file", file);
+    const response = await apiFetch("/api/profile/avatar", { method: "PUT", body: data });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      throw new AuthApiError(payload.code ?? codeForStatus(response.status), response.status);
+    }
+    return response.json() as Promise<{ profileImageUrl: string; profileImageVersion: string }>;
+  },
+  removeAvatar: () => request<{ profileImageUrl: null; profileImageVersion: null }>("/api/profile/avatar", "DELETE"),
 };
 
 export const noteApi = {

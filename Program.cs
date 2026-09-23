@@ -1,15 +1,19 @@
 using Microsoft.EntityFrameworkCore;
-using Lapis.Features.Auth;
-using Lapis.Features.Board;
-using Lapis.Features.Notes;
-using Lapis.Features.NoteConnection;
-using Lapis.Features.Users;
-using Lapis.Shared.Data.AppDbContext;
+using Wukna.Features.Auth;
+using Wukna.Features.Board;
+using Wukna.Features.Notes;
+using Wukna.Features.NoteConnection;
+using Wukna.Features.Realtime;
+using Wukna.Features.Users;
+using Wukna.Features.Profile;
+using Wukna.Shared.Data.AppDbContext;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Text;
@@ -20,9 +24,11 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddControllersWithViews();
 builder.Services.AddHealthChecks();
+builder.Services.Configure<FormOptions>(options =>
+    options.MultipartBodyLengthLimit = 5 * 1024 * 1024 + 64 * 1024);
 
 // Keep runtime mapping aligned with the design-time factory before creating migrations.
-builder.Services.AddDbContext<LapisDbContext>(options =>
+builder.Services.AddDbContext<WuknaDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Postgres"))
            .UseSnakeCaseNamingConvention());
 
@@ -38,6 +44,22 @@ ValidateGoogleOAuthSettings(googleSettings, builder.Environment);
 builder.Services.AddSingleton(jwtOptions);
 builder.Services.AddSingleton(googleSettings);
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<BoardActivity>();
+builder.Services.AddScoped<BoardSummaryReader>();
+builder.Services.AddSingleton<IProfileImageStore, FileProfileImageStore>();
+builder.Services.AddHostedService<ProfileImageCleanupService>();
+builder.Services.AddScoped<BoardAccess>();
+builder.Services.AddScoped<BoardRealtimeDispatcher>();
+builder.Services.AddSingleton<IBoardConnectionRegistry, BoardConnectionRegistry>();
+builder.Services.AddSingleton<INoteGeometryPreviewRegistry, NoteGeometryPreviewRegistry>();
+builder.Services.AddSingleton<INoteEditingRegistry, NoteEditingRegistry>();
+builder.Services.AddSingleton<IBoardCursorRegistry, BoardCursorRegistry>();
+builder.Services.AddSingleton<IBoardRealtimePublisher, BoardRealtimePublisher>();
+builder.Services.AddHostedService<NoteEditingCleanupService>();
+builder.Services.AddHostedService<BoardCursorCleanupService>();
+builder.Services.AddSingleton<IUserIdProvider, SubjectUserIdProvider>();
+builder.Services.AddSignalR(options =>
+    options.EnableDetailedErrors = builder.Environment.IsDevelopment());
 builder.Services.AddSingleton<JwtTokenGenerator>();
 builder.Services.AddScoped<SessionIssuer>();
 builder.Services.AddScoped<AuthService>();
@@ -46,7 +68,8 @@ builder.Services.AddScoped<ExternalLoginGrantService>();
 builder.Services.AddScoped<GoogleLinkIntentService>();
 builder.Services.AddScoped<GoogleAccountLinkService>();
 builder.Services.AddHostedService<ExternalLoginGrantCleanupService>();
-// Keep one application name across future replicas; share the key ring when scaling out.
+// Keep the pre-rename cryptographic application name so existing protected auth payloads
+// remain readable across deployment of the Wukna identifiers.
 builder.Services.AddDataProtection().SetApplicationName("Lapis");
 
 builder.Services.AddIdentityCore<User>(options =>
@@ -55,7 +78,7 @@ builder.Services.AddIdentityCore<User>(options =>
         options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
         options.Lockout.MaxFailedAccessAttempts = 5;
     })
-    .AddEntityFrameworkStores<LapisDbContext>()
+    .AddEntityFrameworkStores<WuknaDbContext>()
     .AddSignInManager();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -74,11 +97,25 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
         };
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                // Browser WebSocket/EventSource APIs cannot attach the Authorization header.
+                // Accept SignalR's query-token fallback on the one hub path only.
+                if (context.HttpContext.Request.Path.StartsWithSegments(BoardHub.Path))
+                {
+                    var accessToken = context.Request.Query["access_token"].ToString();
+                    if (!string.IsNullOrWhiteSpace(accessToken)) context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
+        };
     })
     .AddCookie(IdentityConstants.ExternalScheme, options =>
     {
-        // This cookie only carries Google's validated principal from the provider callback
-        // to Lapis's internal callback. It is separate from the application refresh cookie.
+        // Keep the established cookie name so an in-flight Google callback survives rollout.
+        // This cookie carries Google's validated principal to Wukna's internal callback.
         options.Cookie.Name = "lapis.external";
         options.Cookie.HttpOnly = true;
         options.Cookie.IsEssential = true;
@@ -132,6 +169,7 @@ builder.Services.AddAuthorization();
 builder.Services.AddAntiforgery(options =>
 {
     options.HeaderName = "X-CSRF-TOKEN";
+    // Retain the established name so already-open forms keep their matching antiforgery token.
     options.Cookie.Name = "lapis.csrf";
     options.Cookie.SameSite = SameSiteMode.Strict;
     options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
@@ -148,6 +186,7 @@ app.UseSwaggerUI();
 
 
 app.UseStaticFiles();
+app.UseStaticFiles(ProfileImageStaticFiles.Options(app.Services.GetRequiredService<IProfileImageStore>()));
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -157,6 +196,9 @@ app.MapAuthEndpoints();
 app.MapBoardEndpoints();
 app.MapNoteEndpoints();
 app.MapNoteConnectionEndpoints();
+app.MapProfileEndpoints();
+app.MapHub<BoardHub>(BoardHub.Path, options =>
+    options.CloseOnAuthenticationExpiration = true).RequireAuthorization();
 
 app.MapControllerRoute(name: "default", pattern: "{controller=Health}/{action=Index}/{id?}");
 
@@ -201,3 +243,5 @@ static void ValidateGoogleOAuthSettings(
             "or an HTTP loopback origin in Development.");
     }
 }
+
+public partial class Program;

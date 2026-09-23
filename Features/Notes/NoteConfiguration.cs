@@ -1,4 +1,4 @@
-namespace Lapis.Features.Notes;
+namespace Wukna.Features.Notes;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;

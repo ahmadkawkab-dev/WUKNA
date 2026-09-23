@@ -1,6 +1,6 @@
-namespace Lapis.Features.Board;
+namespace Wukna.Features.Board;
 
-using Lapis.Features.Users;
+using Wukna.Features.Users;
 
 public enum BoardRole
 {

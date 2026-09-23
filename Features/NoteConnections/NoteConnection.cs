@@ -1,4 +1,4 @@
-namespace Lapis.Features.NoteConnection;
+namespace Wukna.Features.NoteConnection;
 
 using Features.Notes;
 

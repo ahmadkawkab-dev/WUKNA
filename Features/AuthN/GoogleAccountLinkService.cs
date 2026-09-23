@@ -1,7 +1,7 @@
-namespace Lapis.Features.Auth;
+namespace Wukna.Features.Auth;
 
-using Lapis.Features.Users;
-using Lapis.Shared.Data.AppDbContext;
+using Wukna.Features.Users;
+using Wukna.Shared.Data.AppDbContext;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -9,11 +9,11 @@ using Npgsql;
 public sealed record GoogleLinkResult(bool Succeeded, string? ErrorCode);
 
 /// <summary>
-/// Links a validated Google provider identity to an already-authenticated LAPIS user.
+/// Links a validated Google provider identity to an already-authenticated WUKNA user.
 /// The provider key's Identity primary key prevents ownership by two users.
 /// </summary>
 public sealed class GoogleAccountLinkService(
-    LapisDbContext db,
+    WuknaDbContext db,
     UserManager<User> userManager)
 {
     public const string AlreadyLinked = "external_login_already_linked";
@@ -38,7 +38,7 @@ public sealed class GoogleAccountLinkService(
         if (existing is not null)
             return existing.Id == user.Id ? Success() : Conflict();
 
-        // A LAPIS account currently supports one Google identity. The user-row lock keeps
+        // A WUKNA account currently supports one Google identity. The user-row lock keeps
         // simultaneous callbacks for two different Google accounts from both passing this check.
         var userLogins = await userManager.GetLoginsAsync(user);
         if (userLogins.Any(login =>
