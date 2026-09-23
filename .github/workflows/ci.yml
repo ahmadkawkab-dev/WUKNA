@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore tests/Lapis.IntegrationTests/Lapis.IntegrationTests.csproj
+
+      - name: Build
+        run: dotnet build tests/Lapis.IntegrationTests/Lapis.IntegrationTests.csproj --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test tests/Lapis.IntegrationTests/Lapis.IntegrationTests.csproj --configuration Release --no-build
