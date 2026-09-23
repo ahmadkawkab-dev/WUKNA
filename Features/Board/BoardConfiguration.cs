@@ -13,6 +13,7 @@ public class BoardConfiguration : IEntityTypeConfiguration<Board>
               .IsRequired()
               .HasMaxLength(200);
         entity.Property(board => board.CreatedAt).HasDefaultValueSql("now()");
+        entity.Property(board => board.UpdatedAt).HasDefaultValueSql("now()");
     }
 }
 

@@ -1,7 +1,7 @@
 export type AuthSession = {
   accessToken: string;
   expiresAt: string;
-  user: { id: string; email: string };
+  user: { id: string; email: string; username: string; displayName: string | null; profileImageUrl: string | null; profileImageVersion: string | null };
 };
 
 export type AccountStatus = {
@@ -32,13 +32,13 @@ export function setSessionExpiredHandler(handler: (() => void) | null): void {
 }
 
 async function errorFromResponse(response: Response): Promise<AuthApiError> {
-  const body: { error?: string; errors?: Record<string, string[]> | string[] } =
+  const body: { error?: string; code?: string; errors?: Record<string, string[]> | string[] } =
     await response.json().catch(() => ({}));
   const details = Array.isArray(body.errors)
     ? body.errors
     : Object.values(body.errors ?? {}).flat();
   return new AuthApiError(
-    body.error ??
+    body.code ?? body.error ??
       (response.status === 401 ? "unauthenticated" : "authentication_failed"),
     response.status,
     details,
@@ -198,6 +198,22 @@ export async function apiFetch(
 
 export function currentSession(): AuthSession | null {
   return session;
+}
+
+export function reconcileSessionUser(user: AuthSession["user"]): AuthSession | null {
+  if (!session) return null;
+  session = { ...session, user };
+  return session;
+}
+
+/** Supplies a current short-lived bearer token to SignalR without exposing refresh credentials. */
+export async function realtimeAccessToken(): Promise<string> {
+  const activeSession = await restoreSession();
+  if (!activeSession) {
+    sessionExpiredHandler?.();
+    throw new AuthApiError("unauthenticated", 401);
+  }
+  return activeSession.accessToken;
 }
 
 export async function logout(): Promise<void> {

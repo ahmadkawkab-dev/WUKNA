@@ -1,23 +1,24 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type FormEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as Pointer,
 } from "react";
 import {
   ArrowLeft,
-  ArrowRight,
-  Grid2X2,
+  GripVertical,
   Link2,
   ListChecks,
-  LogOut,
   MessageSquare,
+  MoreHorizontal,
   Plus,
-  Search,
+  Settings2,
   Share2,
-  Sidebar,
   Sparkles,
   StickyNote,
   X,
@@ -25,17 +26,11 @@ import {
 import {
   currentSession,
   exchangeGoogleCode,
-  getAccountStatus,
-  login,
   logout,
   logoutEverywhere,
-  register,
   restoreSession,
+  reconcileSessionUser,
   setSessionExpiredHandler,
-  startGoogleLink,
-  startGoogleLogin,
-  unlinkGoogle,
-  type AccountStatus,
   type AuthSession,
 } from "./auth";
 import {
@@ -44,12 +39,102 @@ import {
   connectionApi,
   errorMessage,
   noteApi,
-  type BoardDto,
+  profileApi,
+  type BoardDetailDto,
+  type BoardListItemDto,
   type ConnectionDto,
   type MemberDto,
+  type ProfileDto,
   type NoteDto,
   type PatchNote,
 } from "./api";
+import { AuthScreen } from "./features/auth/AuthScreen";
+import { AccountPanel } from "./features/account/AccountPanel";
+import { accountSectionForPath } from "./features/account/accountRoute";
+import { Wordmark } from "./components/brand/Wordmark";
+import { AppShell } from "./components/navigation/AppShell";
+import { Notice } from "./components/ui/Notice";
+import { Dialog } from "./components/ui/Dialog";
+import { Button, IconButton } from "./components/ui/Button";
+import { BoardLanding } from "./features/boards/BoardLanding";
+import { SoonPage } from "./features/future/PreviewUI";
+import { BoardPresence } from "./features/boards/BoardPresence";
+import { MemberActionsMenu, memberActionError, type MemberMenuAnchor } from "./features/boards/MemberActionsMenu";
+import {
+  NoteEditingIndicator,
+  type EditingViewer,
+} from "./features/boards/NoteEditingIndicator";
+import {
+  RemoteCursors,
+} from "./features/boards/RemoteCursors";
+import { isDragGesture } from "./features/boards/gesture";
+import { collaboratorInitials, collaboratorStyle } from "./features/boards/collaboratorIdentity";
+import { Avatar, identityLabel } from "./components/ui/Avatar";
+import { CollaborationAnnouncements } from "./features/boards/CollaborationAnnouncements";
+import {
+  connectedNoteIds,
+  nearestConnectionPath,
+  notesAreConnected,
+} from "./features/boards/connectionGeometry";
+import {
+  noteAppearanceStyle,
+  notePigments,
+} from "./features/boards/noteAppearance";
+import { clampDimension, noteDimensionBounds } from "./features/boards/noteDimensions";
+import { RealtimeHealth } from "./features/boards/RealtimeHealth";
+import {
+  clientPointToBoard,
+  revealBoardNode,
+} from "./features/boards/boardViewport";
+import {
+  EditorStateProvider,
+  useEditorActions,
+  useEditorNavigation,
+  useNoteDraft,
+} from "./features/boards/editor/EditorStateProvider";
+import { realtimeConnection } from "./realtime/connection";
+import { CursorRenderStore } from "./realtime/cursorRenderStore";
+import {
+  realtimeEvents,
+  type ProfileChangedEvent,
+  type UserProfileChangedEvent,
+  type BoardScopedEvent,
+  type BoardPresenceSnapshot,
+  type BoardSummaryChangedEvent,
+  type BoardCursorMovedEvent,
+  type BoardCursorStoppedEvent,
+  type BoardUpdatedEvent,
+  type ConnectionCreatedEvent,
+  type ConnectionDeletedEvent,
+  type NoteChangedEvent,
+  type NoteDeletedEvent,
+  type NoteGeometryOperation,
+  type NoteGeometryPreviewEndedEvent,
+  type NoteGeometryPreviewEvent,
+  type NoteEditingStartedEvent,
+  type NoteEditingStoppedEvent,
+} from "./realtime/events";
+import {
+  mergeBoardSummary,
+  mergePresenceSnapshot,
+  mergeVersionedNote,
+  removeVersionedNote,
+  shouldAcceptGeometryPreview,
+  shouldClearGeometryPreview,
+  shouldEndGeometryPreview,
+} from "./realtime/reconcile";
+import {
+  applyEditingStarted,
+  applyEditingStopped,
+  editingUserIds,
+  type NoteEditingByNote,
+} from "./realtime/editing";
+import {
+  applyCursorMoved,
+  applyCursorStopped,
+  shouldAcceptCursorMoved,
+  type BoardCursorsByConnection,
+} from "./realtime/cursors";
 
 type Panel = "tasks" | "share" | "chat" | null;
 type VisualPatch = Partial<{
@@ -65,462 +150,137 @@ type ConnectionDraft = {
   y: number;
   targetId: string | null;
 };
-const minNoteWidth = 160;
-const minNoteHeight = 110;
+type RemoteGeometryPresentation = {
+  userId: string;
+  label: string;
+  initials: string;
+  operation: NoteGeometryOperation;
+  profileImageUrl?: string | null;
+  username?: string | null;
+};
 const boardFromPath = (path: string) =>
   /^\/boards\/([0-9a-f-]{36})$/i.exec(path)?.[1] ?? null;
-const initials = (email: string) => email.slice(0, 2).toUpperCase();
 const isConflict = (error: unknown) =>
   error instanceof AuthApiError && error.code === "note_version_conflict";
-function Logo() {
-  return (
-    <div className="brand">
-      <span className="brand-mark">
-        <span />
-      </span>
-      LAPIS
-    </div>
-  );
-}
-function CircuitBackground() {
-  return (
-    <div className="circuit-bg" aria-hidden="true">
-      <svg viewBox="0 0 1200 760" preserveAspectRatio="none">
-        <path d="M40 120H180V40H330M720 60H820V170H1040V90H1150M30 610H220V530H380M780 690V560H960V460H1170M500 0V95H610V185H690M120 330H270V400H420V350H550" />
-        <path d="M250 710V640H520V590H650V480H810M910 250V340H800V400H690M1080 560H1010V650H900" />
-        <circle cx="180" cy="120" r="4" />
-        <circle cx="720" cy="60" r="4" />
-        <circle cx="380" cy="530" r="4" />
-      </svg>
-      <span className="pulse pulse-one" />
-      <span className="pulse pulse-two" />
-    </div>
-  );
-}
-
-function AuthScreen({
-  mode,
-  error: initialError,
-  onSuccess,
-  navigate,
-}: {
-  mode: "login" | "register";
-  error: string;
-  onSuccess: (s: AuthSession) => void;
-  navigate: (p: string) => void;
-}) {
-  const [email, setEmail] = useState(""),
-    [password, setPassword] = useState(""),
-    [error, setError] = useState(initialError),
-    [busy, setBusy] = useState(false);
-  useEffect(() => setError(initialError), [initialError, mode]);
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    setBusy(true);
-    setError("");
-    try {
-      onSuccess(
-        mode === "login"
-          ? await login(email.trim(), password)
-          : await register(email.trim(), password),
-      );
-    } catch (cause) {
-      setError(errorMessage(cause));
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <main className="auth-page">
-      <div className="auth-glow" />
-      <section className="auth-card">
-        <Logo />
-        <div className="auth-heading">
-          <span className="eyebrow">Your connected workspace</span>
-          <h1>
-            {mode === "login" ? "Welcome back." : "Create your workspace."}
-          </h1>
-          <p>Organize ideas spatially with your team.</p>
-        </div>
-        {error && (
-          <div className="error-box" role="alert">
-            {error}
-          </div>
-        )}
-        <form className="auth-form" onSubmit={submit}>
-          <label>
-            Email address
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </label>
-          <label>
-            Password
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              minLength={mode === "register" ? 8 : undefined}
-              required
-            />
-          </label>
-          <button
-            className="primary-button full"
-            disabled={busy || !email.trim() || !password}
-          >
-            {busy
-              ? "Connecting…"
-              : mode === "login"
-                ? "Sign in"
-                : "Create account"}{" "}
-            <ArrowRight size={16} />
-          </button>
-        </form>
-        <div className="auth-divider">or continue with</div>
-        <button className="google-button" onClick={startGoogleLogin}>
-          Continue with Google
-        </button>
-        <button
-          className="auth-switch"
-          onClick={() => navigate(mode === "login" ? "/register" : "/login")}
-        >
-          {mode === "login" ? "Create an account" : "Sign in"}
-        </button>
-      </section>
-    </main>
-  );
-}
-
-function SidebarNav({
-  user,
-  boards,
-  active,
-  navigate,
-  signOut,
-  signOutEverywhere,
-  notify,
-}: {
-  user: AuthSession["user"];
-  boards: BoardDto[];
-  active: string | null;
-  navigate: (p: string) => void;
-  signOut: () => void;
-  signOutEverywhere: () => void;
-  notify: (m: string) => void;
-}) {
-  const [collapsed, setCollapsed] = useState(false),
-    [account, setAccount] = useState(false),
-    [accountStatus, setAccountStatus] = useState<AccountStatus | null>(null),
-    [accountLoading, setAccountLoading] = useState(false),
-    [accountError, setAccountError] = useState("");
-  const loadAccount = useCallback(async () => {
-    setAccountLoading(true);
-    setAccountError("");
-    try {
-      setAccountStatus(await getAccountStatus());
-    } catch (cause) {
-      setAccountStatus(null);
-      setAccountError(errorMessage(cause));
-    } finally {
-      setAccountLoading(false);
-    }
-  }, []);
-  useEffect(() => {
-    if (account) void loadAccount();
-  }, [account, loadAccount]);
-  async function link() {
-    try {
-      await startGoogleLink();
-    } catch (cause) {
-      notify(errorMessage(cause));
-    }
-  }
-  async function unlink() {
-    try {
-      await unlinkGoogle();
-      await loadAccount();
-      notify("Google login removed");
-    } catch (cause) {
-      notify(errorMessage(cause));
-    }
-  }
-  return (
-    <aside className={`sidebar ${collapsed ? "collapsed" : ""}`}>
-      <div className="sidebar-top">
-        <Logo />
-        <button
-          className="collapse"
-          aria-label="Toggle sidebar"
-          onClick={() => setCollapsed(!collapsed)}
-        >
-          <Sidebar size={17} />
-        </button>
-      </div>
-      <button className="nav-item selected" onClick={() => navigate("/boards")}>
-        <Grid2X2 size={17} />
-        <span>Boards</span>
-      </button>
-      <div className="sidebar-section">
-        <div className="section-label">Your boards</div>
-        {boards.map((board) => (
-          <button
-            className={`recent-board ${active === board.id ? "current" : ""}`}
-            key={board.id}
-            onClick={() => navigate(`/boards/${board.id}`)}
-          >
-            <span className="board-dot" />
-            {board.title}
-          </button>
-        ))}
-      </div>
-      <div className="sidebar-bottom">
-        <button
-          className="user-row"
-          onClick={() => setAccount(!account)}
-          aria-expanded={account}
-        >
-          <span className="avatar user-avatar">{initials(user.email)}</span>
-          <span className="user-copy">
-            <strong>{user.email}</strong>
-            <small>Account</small>
-          </span>
-        </button>
-        {account && (
-          <div className="account-actions">
-            <div className="provider-status">
-              <strong>Google</strong>
-              {accountLoading ? (
-                <span>Checking…</span>
-              ) : accountError ? (
-                <button onClick={() => void loadAccount()}>Retry status</button>
-              ) : accountStatus?.externalLogins.includes("Google") ? (
-                <>
-                  <span>Connected</span>
-                  {accountStatus.hasPassword ||
-                  accountStatus.externalLogins.some((provider) => provider !== "Google") ? (
-                    <button onClick={() => void unlink()}>Remove Google</button>
-                  ) : (
-                    <small>Only sign-in method</small>
-                  )}
-                </>
-              ) : accountStatus ? (
-                <button onClick={() => void link()}>Link Google</button>
-              ) : null}
-            </div>
-            <button onClick={signOutEverywhere}>Sign out everywhere</button>
-          </div>
-        )}
-        <button className="nav-item" onClick={signOut}>
-          <LogOut size={17} />
-          <span>Sign out</span>
-        </button>
-      </div>
-    </aside>
-  );
-}
-
-function Dashboard({
-  boards,
-  loading,
-  failure,
-  retry,
-  navigate,
-  create,
-}: {
-  boards: BoardDto[];
-  loading: boolean;
-  failure: string;
-  retry: () => void;
-  navigate: (p: string) => void;
-  create: (title: string) => Promise<void>;
-}) {
-  const [query, setQuery] = useState(""),
-    [form, setForm] = useState(false),
-    [title, setTitle] = useState(""),
-    [error, setError] = useState(""),
-    [busy, setBusy] = useState(false);
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    setBusy(true);
-    setError("");
-    try {
-      await create(title.trim());
-      setTitle("");
-      setForm(false);
-    } catch (cause) {
-      setError(errorMessage(cause));
-    } finally {
-      setBusy(false);
-    }
-  }
-  const shown = boards.filter((board) =>
-    board.title.toLowerCase().includes(query.toLowerCase()),
-  );
-  return (
-    <div className="dashboard">
-      <div className="dashboard-head">
-        <div>
-          <span className="eyebrow">Workspace / Boards</span>
-          <h1>My Boards</h1>
-          <p>Keep your thinking connected and moving forward.</p>
-        </div>
-        <button className="primary-button" onClick={() => setForm(true)}>
-          <Plus size={16} /> New board
-        </button>
-      </div>
-      {form && (
-        <form className="inline-form" onSubmit={submit}>
-          <label>
-            Board title
-            <input
-              autoFocus
-              value={title}
-              maxLength={200}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </label>
-          <button className="primary-button" disabled={busy || !title.trim()}>
-            Create
-          </button>
-          <button
-            className="soft-button"
-            type="button"
-            onClick={() => setForm(false)}
-          >
-            Cancel
-          </button>
-          {error && <span className="form-error">{error}</span>}
-        </form>
-      )}
-      <div className="board-toolbar">
-        <div className="search-field">
-          <Search size={16} />
-          <input
-            aria-label="Search boards"
-            placeholder="Search boards"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-      </div>
-      {loading ? (
-        <div className="empty-state">Loading boards…</div>
-      ) : failure ? (
-        <div className="empty-state">
-          <h2>Could not load boards</h2>
-          <p>{failure}</p>
-          <button className="soft-button" onClick={retry}>
-            Retry
-          </button>
-        </div>
-      ) : shown.length ? (
-        <div className="boards-grid">
-          {shown.map((board, index) => (
-            <button
-              className="board-card"
-              key={board.id}
-              onClick={() => navigate(`/boards/${board.id}`)}
-            >
-              <div className={`card-preview preview-${index % 4}`}>
-                <div className="preview-line" />
-                <div className="preview-note" />
-              </div>
-              <div className="card-body">
-                <div className="card-title">{board.title}</div>
-                <p>
-                  {board.role === 1
-                    ? "Owned by you"
-                    : board.canEdit
-                      ? "Shared · can edit"
-                      : "Shared · read only"}
-                </p>
-                <div className="card-meta">
-                  Created {new Date(board.createdAt).toLocaleDateString()}
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
-      ) : (
-        <div className="empty-state">
-          <Grid2X2 size={26} />
-          <h2>{query ? "No boards found" : "No boards yet"}</h2>
-          <p>
-            {query ? "Try another search." : "Create a board to get started."}
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function InlineText({
-  value,
+function InlineNoteText({
+  note,
+  field,
   label,
   editable,
   autoEdit = false,
   activation = "click",
   onSave,
-  onFinish,
+  onEditingChange,
 }: {
-  value: string;
+  note: NoteDto;
+  field: "title" | "content";
   label: string;
   editable: boolean;
   autoEdit?: boolean;
   activation?: "click" | "double";
-  onSave: (value: string) => void;
-  onFinish?: () => void;
+  onSave: (value: string) => Promise<void>;
+  onEditingChange?: (editing: boolean) => void;
 }) {
   const [editing, setEditing] = useState(autoEdit);
-  const [draft, setDraft] = useState(value);
-  const cancelled = useRef(false);
+  const draft = useNoteDraft(note.id);
+  const editor = useEditorActions();
+  const value = draft?.[field] ?? note[field];
+  const skipSave = useRef(false);
+  const editableRef = useRef(editable);
+  editableRef.current = editable;
+  const editingAnnounced = useRef(false);
+  const editingChangeRef = useRef(onEditingChange);
   useEffect(() => {
-    if (!editing) setDraft(value);
-  }, [value, editing]);
-  function finish() {
+    editingChangeRef.current = onEditingChange;
+  }, [onEditingChange]);
+  useEffect(() => () => {
+    if (editingAnnounced.current) editingChangeRef.current?.(false);
+  }, []);
+  function announceEditing(active: boolean) {
+    if (editingAnnounced.current === active) return;
+    editingAnnounced.current = active;
+    editingChangeRef.current?.(active);
+  }
+  async function finish(nextValue: string) {
+    announceEditing(false);
+    editor.stopEditing(note.id);
     setEditing(false);
-    onFinish?.();
-    if (cancelled.current) {
-      cancelled.current = false;
-      setDraft(value);
+    if (skipSave.current) {
+      skipSave.current = false;
       return;
     }
-    const next = draft.trim();
-    if (next && next !== value) onSave(next);
-    else setDraft(value);
+    if (!editableRef.current) return;
+    const next = field === "title" ? nextValue.trim() : nextValue;
+    if (field === "title" && !next) return;
+    if (next !== note[field]) await onSave(next);
   }
-  if (editing && editable)
-    return (
-      <input
-        className="inline-edit"
+  if (editing && editable) {
+    const change = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+      editor.updateDraft(note, { [field]: event.target.value });
+    const focus = () => {
+      editor.startEditing(note.id);
+      announceEditing(true);
+    };
+    if (field === "content") return (
+      <textarea
+        className="inline-edit inline-edit--content"
         aria-label={label}
         autoFocus
-        maxLength={200}
-        value={draft}
-        onChange={(event) => setDraft(event.target.value)}
-        onBlur={finish}
+        rows={4}
+        value={value}
+        onFocus={focus}
+        onChange={change}
+        onBlur={(event) => void finish(event.currentTarget.value)}
+        onClick={(event) => event.stopPropagation()}
         onKeyDown={(event) => {
-          if (event.key === "Enter") {
+          if (event.key === "Escape") {
             event.preventDefault();
+            skipSave.current = true;
             event.currentTarget.blur();
-          } else if (event.key === "Escape") {
-            cancelled.current = true;
+          } else if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+            event.preventDefault();
             event.currentTarget.blur();
           }
         }}
       />
     );
+    return (
+      <input
+        className="inline-edit inline-edit--title"
+        aria-label={label}
+        autoFocus
+        maxLength={200}
+        value={value}
+        onFocus={focus}
+        onChange={change}
+        onBlur={(event) => void finish(event.currentTarget.value)}
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            event.currentTarget.blur();
+          } else if (event.key === "Escape") {
+            skipSave.current = true;
+            event.currentTarget.blur();
+          }
+        }}
+      />
+    );
+  }
   return (
     <span
-      className={editable ? "editable-text" : ""}
+      className={`${editable ? "editable-text" : ""} ${field === "content" ? "note-body-text" : ""}`.trim()}
       role={editable ? "button" : undefined}
       tabIndex={editable ? 0 : undefined}
       title={editable ? (activation === "double" ? "Double-click to edit" : "Click to edit") : undefined}
-      onClick={editable && activation === "click" ? () => setEditing(true) : undefined}
-      onDoubleClick={editable && activation === "double" ? () => setEditing(true) : undefined}
+      onClick={editable && activation === "click" ? (event) => {
+        event.stopPropagation();
+        setEditing(true);
+      } : undefined}
+      onDoubleClick={editable && activation === "double" ? (event) => {
+        event.stopPropagation();
+        setEditing(true);
+      } : undefined}
       onKeyDown={editable ? (event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
@@ -528,7 +288,7 @@ function InlineText({
         }
       } : undefined}
     >
-      {value}
+      {value || (field === "content" && editable ? "Add body text…" : value)}
     </span>
   );
 }
@@ -539,13 +299,15 @@ function TasksPanel({
   toggle,
   edit,
   remove,
+  editingChanged,
   close,
 }: {
   notes: NoteDto[];
   editable: boolean;
   toggle: (note: NoteDto) => void;
-  edit: (note: NoteDto, title: string) => void;
+  edit: (note: NoteDto, title: string) => Promise<void>;
   remove: (note: NoteDto) => void;
+  editingChanged: (noteId: string, active: boolean) => void;
   close: () => void;
 }) {
   const items = notes.filter((note) => note.kind === 2);
@@ -554,13 +316,9 @@ function TasksPanel({
     <aside className="side-panel">
       <div className="panel-head">
         <h2>Tasks</h2>
-        <button
-          className="icon-button"
-          onClick={close}
-          aria-label="Close tasks"
-        >
-          <X size={17} />
-        </button>
+        <IconButton label="Close tasks" onClick={close}>
+          <X size={18} aria-hidden="true" />
+        </IconButton>
       </div>
       <div className="task-group">
         {items.length ? (
@@ -569,17 +327,23 @@ function TasksPanel({
               className={`panel-task ${item.isCompleted ? "completed" : ""}`}
               key={item.id}
             >
-              <input
-                type="checkbox"
-                checked={item.isCompleted}
-                disabled={!editable}
-                onChange={() => toggle(item)}
-              />
-              <InlineText
-                value={item.title}
+              <label className="wk-checkbox-target">
+                <input
+                  type="checkbox"
+                  aria-label={`Complete ${item.title}`}
+                  checked={item.isCompleted}
+                  disabled={!editable}
+                  onChange={() => toggle(item)}
+                />
+              </label>
+              <InlineNoteText
+                note={item}
+                field="title"
                 label="Checklist item title"
                 editable={editable}
                 onSave={(title) => edit(item, title)}
+                onEditingChange={(active) =>
+                  editingChanged(item.parentNoteId ?? item.id, active)}
               />
               {editable && (
                 confirmRemove === item.id ? (
@@ -613,20 +377,40 @@ function TasksPanel({
 function SharePanel({
   board,
   members,
+  presence,
+  presenceAvailable,
   setGuest,
+  changePermission,
   removeGuest,
   close,
 }: {
-  board: BoardDto;
+  board: BoardDetailDto;
   members: MemberDto[];
+  presence: BoardPresenceSnapshot | null;
+  presenceAvailable: boolean;
   setGuest: (email: string, edit: boolean) => Promise<void>;
+  changePermission: (member: MemberDto, canEdit: boolean) => Promise<void>;
   removeGuest: (id: string) => Promise<void>;
   close: () => void;
 }) {
   const [email, setEmail] = useState(""),
     [edit, setEdit] = useState(false),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [menu, setMenu] = useState<{ member: MemberDto; anchor: MemberMenuAnchor } | null>(null),
+    [removeTarget, setRemoveTarget] = useState<MemberDto | null>(null);
+  const heading = useRef<HTMLHeadingElement>(null);
+  const removalOrigin = useRef<HTMLElement | null>(null);
+  const online = new Set(presenceAvailable ? presence?.viewers.map((viewer) => viewer.userId) : []);
+  function closeMenu(restoreFocus = true) {
+    const trigger = menu?.anchor.trigger;
+    setMenu(null);
+    if (restoreFocus && trigger?.isConnected) queueMicrotask(() => trigger.focus());
+  }
+  function openMenu(member: MemberDto, anchor: MemberMenuAnchor) {
+    if (board.role !== 1 || member.role !== 0) return;
+    setMenu({ member, anchor });
+  }
   async function submit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
@@ -640,13 +424,16 @@ function SharePanel({
       setBusy(false);
     }
   }
-  async function remove(id: string) {
+  async function remove() {
+    if (!removeTarget) return;
     setBusy(true);
     setError("");
     try {
-      await removeGuest(id);
+      await removeGuest(removeTarget.userId);
+      setRemoveTarget(null);
+      queueMicrotask(() => heading.current?.focus());
     } catch (cause) {
-      setError(errorMessage(cause));
+      setError(memberActionError(cause));
     } finally {
       setBusy(false);
     }
@@ -654,60 +441,81 @@ function SharePanel({
   return (
     <aside className="side-panel">
       <div className="panel-head">
-        <h2>Board members</h2>
-        <button
-          className="icon-button"
-          onClick={close}
-          aria-label="Close sharing"
-        >
-          <X size={17} />
-        </button>
+        <h2 ref={heading} tabIndex={-1}>Board members</h2>
+        <IconButton label="Close sharing" onClick={close}>
+          <X size={18} aria-hidden="true" />
+        </IconButton>
       </div>
       <div className="member-list">
-        {members.map((member) => (
-          <div className="member-row" key={member.userId}>
-            <span className="avatar">{initials(member.email)}</span>
-            <div>
-              <strong>{member.email}</strong>
-              <small>
-                {member.role === 1
-                  ? "Owner"
-                  : member.canEdit
-                    ? "Can edit"
-                    : "Read only"}
-              </small>
+        {members.map((member) => {
+          const name = identityLabel(member);
+          const manageable = board.role === 1 && member.role === 0;
+          return (
+            <div className="member-row" key={member.userId} role="group"
+              aria-label={`${name}, ${member.role === 1 ? "Owner" : member.canEdit ? "Editor" : "Viewer"}`}
+              tabIndex={manageable ? 0 : undefined}
+              aria-keyshortcuts={manageable ? "Shift+F10" : undefined}
+              onContextMenu={(event) => {
+                if (!manageable) return;
+                event.preventDefault();
+                openMenu(member, { x: event.clientX, y: event.clientY, trigger: event.currentTarget });
+              }}
+              onKeyDown={(event) => {
+                if (!manageable || !(event.key === "ContextMenu" || event.key === "F10" && event.shiftKey)) return;
+                event.preventDefault();
+                const rect = event.currentTarget.getBoundingClientRect();
+                openMenu(member, { x: rect.left, y: rect.bottom, trigger: event.currentTarget });
+              }}>
+              <Avatar identity={member} size="small" className="avatar" style={collaboratorStyle(member.userId)} />
+              <div className="wk-member-copy">
+                <strong>{name}</strong>
+                <span>@{member.username}</span>
+                <small>{member.role === 1 ? "Owner" : member.canEdit ? "Editor" : "Viewer"}</small>
+                {online.has(member.userId) && <small className="wk-member-online">Online now</small>}
+              </div>
+              {manageable && (
+                <IconButton label={`Actions for ${name}`} className="wk-member-actions"
+                  onClick={(event) => {
+                    const rect = event.currentTarget.getBoundingClientRect();
+                    openMenu(member, { x: rect.left, y: rect.bottom, trigger: event.currentTarget });
+                  }}>
+                  <MoreHorizontal size={19} aria-hidden="true" />
+                </IconButton>
+              )}
             </div>
-            {board.role === 1 && member.role === 0 && (
-              <>
-                <button
-                  className="soft-button"
-                  disabled={busy}
-                  onClick={async () => {
-                    setBusy(true);
-                    setError("");
-                    try {
-                      await setGuest(member.email, !member.canEdit);
-                    } catch (cause) {
-                      setError(errorMessage(cause));
-                    } finally {
-                      setBusy(false);
-                    }
-                  }}
-                >
-                  {member.canEdit ? "Make read only" : "Allow edit"}
-                </button>
-                <button
-                  className="soft-button"
-                  disabled={busy}
-                  onClick={() => void remove(member.userId)}
-                >
-                  Remove
-                </button>
-              </>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
+      {menu && (
+        <MemberActionsMenu member={menu.member} anchor={menu.anchor}
+          onClose={closeMenu} onPermission={changePermission}
+          onRemove={(member) => {
+            removalOrigin.current = menu.anchor.trigger;
+            closeMenu(false);
+            setError("");
+            setRemoveTarget(member);
+          }} />
+      )}
+      {removeTarget && (
+        <Dialog title={`Remove ${identityLabel(removeTarget)}?`} urgent
+          onClose={() => {
+            if (busy) return;
+            setRemoveTarget(null);
+            queueMicrotask(() => removalOrigin.current?.focus());
+          }}>
+          <p>They will immediately lose access to this board.</p>
+          {error && <p className="wk-alert" role="alert">{error}</p>}
+          <div className="wk-dialog-actions">
+            <Button variant="quiet" disabled={busy} onClick={() => {
+              setRemoveTarget(null);
+              queueMicrotask(() => removalOrigin.current?.focus());
+            }}>Cancel</Button>
+            <Button variant="danger" disabled={busy} onClick={() => void remove()}>
+              {busy ? "Removing…" : "Remove collaborator"}
+            </Button>
+          </div>
+        </Dialog>
+      )}
       {board.role === 1 && (
         <form className="share-form" onSubmit={submit}>
           <label>
@@ -727,9 +535,9 @@ function SharePanel({
             />{" "}
             Allow editing
           </label>
-          <button className="primary-button" disabled={busy || !email.trim()}>
+          <Button type="submit" disabled={busy || !email.trim()}>
             Add or update guest
-          </button>
+          </Button>
         </form>
       )}
       {error && (
@@ -750,18 +558,25 @@ function NoteCard({
   toggle,
   addItem,
   editTitle,
+  editContent,
   editItem,
   removeItem,
+  openProperties,
   autoEditTitle,
   preview,
   cancelPreview,
   commitVisual,
+  broadcastGeometry,
+  endGeometry,
   connectStart,
   connectMove,
   connectEnd,
   connectCancel,
   connecting,
   targetHighlighted,
+  remoteGeometry,
+  editors,
+  editingChanged,
 }: {
   note: NoteDto;
   items: NoteDto[];
@@ -770,19 +585,31 @@ function NoteCard({
   select: () => void;
   toggle: (n: NoteDto) => void;
   addItem: (title: string) => void;
-  editTitle: (title: string) => void;
-  editItem: (item: NoteDto, title: string) => void;
+  editTitle: (title: string) => Promise<void>;
+  editContent: (content: string) => Promise<void>;
+  editItem: (item: NoteDto, title: string) => Promise<void>;
   removeItem: (item: NoteDto) => void;
+  openProperties: (origin: HTMLElement) => void;
   autoEditTitle: boolean;
   preview: (id: string, patch: VisualPatch) => void;
   cancelPreview: (id: string, patch: VisualPatch) => void;
   commitVisual: (id: string, patch: VisualPatch) => Promise<void>;
+  broadcastGeometry: (
+    noteId: string,
+    baseVersion: number,
+    operation: NoteGeometryOperation,
+    patch: VisualPatch,
+  ) => number;
+  endGeometry: (noteId: string, sequence: number) => void;
   connectStart: (id: string, event: Pointer<HTMLButtonElement>) => void;
   connectMove: (event: Pointer<HTMLButtonElement>) => void;
   connectEnd: (event: Pointer<HTMLButtonElement>) => void;
   connectCancel: () => void;
   connecting: boolean;
   targetHighlighted: boolean;
+  remoteGeometry?: RemoteGeometryPresentation;
+  editors: EditingViewer[];
+  editingChanged: (noteId: string, active: boolean) => void;
 }) {
   const drag = useRef<{
     px: number; py: number; x: number; y: number; last: VisualPatch;
@@ -790,10 +617,80 @@ function NoteCard({
   const resize = useRef<{
     px: number; py: number; width: number; height: number; last: VisualPatch;
   } | null>(null);
+  const suppressClick = useRef(false);
+  const keyboardPosition = useRef({
+    x: note.positionX ?? 0,
+    y: note.positionY ?? 0,
+  });
+  const networkPreview = useRef<{
+    lastSentAt: number;
+    lastSequence: number;
+    timer: ReturnType<typeof setTimeout> | null;
+    pending: { operation: NoteGeometryOperation; patch: VisualPatch } | null;
+  }>({ lastSentAt: 0, lastSequence: 0, timer: null, pending: null });
   const [addingItem, setAddingItem] = useState(false);
   const [itemDraft, setItemDraft] = useState("");
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
+  const textDraft = useNoteDraft(note.id);
   const addingDone = useRef(false);
+  useEffect(() => {
+    keyboardPosition.current = {
+      x: note.positionX ?? 0,
+      y: note.positionY ?? 0,
+    };
+  }, [note.positionX, note.positionY]);
+  function emitGeometry(operation: NoteGeometryOperation, patch: VisualPatch) {
+    networkPreview.current.lastSentAt = performance.now();
+    networkPreview.current.lastSequence = broadcastGeometry(
+      note.id,
+      note.version,
+      operation,
+      patch,
+    );
+  }
+  function scheduleGeometry(operation: NoteGeometryOperation, patch: VisualPatch) {
+    const state = networkPreview.current;
+    const remaining = 75 - (performance.now() - state.lastSentAt);
+    if (remaining <= 0) {
+      if (state.timer) clearTimeout(state.timer);
+      state.timer = null;
+      state.pending = null;
+      emitGeometry(operation, patch);
+      return;
+    }
+    state.pending = { operation, patch };
+    if (state.timer) return;
+    state.timer = setTimeout(() => {
+      const pending = networkPreview.current.pending;
+      networkPreview.current.timer = null;
+      networkPreview.current.pending = null;
+      if (pending) emitGeometry(pending.operation, pending.patch);
+    }, remaining);
+  }
+  function flushGeometry(operation: NoteGeometryOperation, patch: VisualPatch) {
+    const state = networkPreview.current;
+    if (state.timer) clearTimeout(state.timer);
+    state.timer = null;
+    state.pending = null;
+    emitGeometry(operation, patch);
+    return state.lastSequence;
+  }
+  const cancelGeometry = useCallback(() => {
+    const state = networkPreview.current;
+    if (state.timer) clearTimeout(state.timer);
+    state.timer = null;
+    state.pending = null;
+    if (state.lastSequence > 0) endGeometry(note.id, state.lastSequence);
+    state.lastSequence = 0;
+    state.lastSentAt = 0;
+  }, [endGeometry, note.id]);
+  function completeGeometry(sequence: number) {
+    endGeometry(note.id, sequence);
+    if (networkPreview.current.lastSequence !== sequence) return;
+    networkPreview.current.lastSequence = 0;
+    networkPreview.current.lastSentAt = 0;
+  }
+  useEffect(() => () => cancelGeometry(), [cancelGeometry]);
   function submitItem() {
     if (addingDone.current) return;
     addingDone.current = true;
@@ -812,6 +709,8 @@ function NoteCard({
       y: note.positionY ?? 0,
       last: {},
     };
+    suppressClick.current = false;
+    cancelGeometry();
     e.currentTarget.setPointerCapture(e.pointerId);
   }
   function move(e: Pointer<HTMLDivElement>) {
@@ -822,6 +721,8 @@ function NoteCard({
       positionY: Math.max(0, drag.current.y + e.clientY - drag.current.py),
     };
     preview(note.id, drag.current.last);
+    if (isDragGesture(drag.current.px, drag.current.py, e.clientX, e.clientY))
+      scheduleGeometry(0, drag.current.last);
   }
   function up(e: Pointer<HTMLDivElement>) {
     if (!drag.current) return;
@@ -831,58 +732,134 @@ function NoteCard({
       positionX: Math.max(0, active.x + e.clientX - active.px),
       positionY: Math.max(0, active.y + e.clientY - active.py),
     };
-    if (Math.abs(final.positionX - active.x) + Math.abs(final.positionY - active.y) > 2) {
+    if (isDragGesture(active.px, active.py, e.clientX, e.clientY)) {
+      suppressClick.current = true;
+      setTimeout(() => {
+        suppressClick.current = false;
+      }, 0);
       preview(note.id, final);
-      void commitVisual(note.id, final);
-    } else cancelPreview(note.id, active.last);
+      const sequence = flushGeometry(0, final);
+      void commitVisual(note.id, final).finally(() => completeGeometry(sequence));
+    } else {
+      cancelPreview(note.id, active.last);
+      cancelGeometry();
+    }
   }
   function cancelDrag() {
     if (!drag.current) return;
     cancelPreview(note.id, drag.current.last);
     drag.current = null;
+    cancelGeometry();
   }
   function resizeMove(e: Pointer<HTMLButtonElement>) {
     if (!resize.current) return;
     if (!(e.buttons & 1)) return resizeUp(e);
+    const nextWidth = resize.current.width + e.clientX - resize.current.px;
+    const bounds = noteDimensionBounds(note, items, nextWidth);
     resize.current.last = {
-      width: Math.max(minNoteWidth, resize.current.width + e.clientX - resize.current.px),
-      height: Math.max(minNoteHeight, resize.current.height + e.clientY - resize.current.py),
+      width: clampDimension(nextWidth, bounds.minWidth, bounds.maxWidth),
+      height: clampDimension(resize.current.height + e.clientY - resize.current.py, bounds.minHeight, bounds.maxHeight),
     };
     preview(note.id, resize.current.last);
+    scheduleGeometry(1, resize.current.last);
   }
   function resizeUp(e: Pointer<HTMLButtonElement>) {
     if (!resize.current) return;
     const active = resize.current;
     resize.current = null;
+    const nextWidth = active.width + e.clientX - active.px;
+    const bounds = noteDimensionBounds(note, items, nextWidth);
     const final = {
-      width: Math.max(minNoteWidth, active.width + e.clientX - active.px),
-      height: Math.max(minNoteHeight, active.height + e.clientY - active.py),
+      width: clampDimension(nextWidth, bounds.minWidth, bounds.maxWidth),
+      height: clampDimension(active.height + e.clientY - active.py, bounds.minHeight, bounds.maxHeight),
     };
     if (final.width !== active.width || final.height !== active.height) {
       preview(note.id, final);
-      void commitVisual(note.id, final);
-    } else cancelPreview(note.id, active.last);
+      const sequence = flushGeometry(1, final);
+      void commitVisual(note.id, final).finally(() => completeGeometry(sequence));
+    } else {
+      cancelPreview(note.id, active.last);
+      cancelGeometry();
+    }
   }
   function cancelResize() {
     if (!resize.current) return;
     cancelPreview(note.id, resize.current.last);
     resize.current = null;
+    cancelGeometry();
+  }
+  function keyboardMove(event: ReactKeyboardEvent<HTMLDivElement>) {
+    if (event.target !== event.currentTarget) return;
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      select();
+      return;
+    }
+    if (!editable || !event.key.startsWith("Arrow")) return;
+    const distance = event.shiftKey ? 32 : 8;
+    const delta = {
+      ArrowLeft: { x: -distance, y: 0 },
+      ArrowRight: { x: distance, y: 0 },
+      ArrowUp: { x: 0, y: -distance },
+      ArrowDown: { x: 0, y: distance },
+    }[event.key];
+    if (!delta) return;
+    event.preventDefault();
+    select();
+    keyboardPosition.current = {
+      x: Math.max(0, keyboardPosition.current.x + delta.x),
+      y: Math.max(0, keyboardPosition.current.y + delta.y),
+    };
+    const patch = {
+      positionX: keyboardPosition.current.x,
+      positionY: keyboardPosition.current.y,
+    };
+    preview(note.id, patch);
+    void commitVisual(note.id, patch);
   }
   return (
     <div
       data-note-id={note.id}
-      className={`sticky-note ${selected ? "selected" : ""} ${note.kind === 1 ? "task-note" : ""}`}
+      role="group"
+      className={`sticky-note ${selected ? "selected" : ""} ${note.kind === 1 ? "task-note" : ""} ${remoteGeometry ? "remote-geometry" : ""}`}
       style={{
+        ...noteAppearanceStyle(note.color),
+        ...(remoteGeometry ? collaboratorStyle(remoteGeometry.userId) : {}),
         left: 0,
         top: 0,
         transform: `translate3d(${note.positionX ?? 0}px, ${note.positionY ?? 0}px, 0)`,
-        backgroundColor: note.color,
         width: note.width,
         height: note.height,
-        zIndex: note.zIndex,
+        zIndex: `calc(var(--layer-notes) + ${note.zIndex})`,
       }}
-      onClick={select}
+      tabIndex={0}
+      aria-label={`${note.kind === 1 ? "Task list" : "Note"}: ${note.title}. ${editable ? "Use arrow keys to move; hold Shift for larger steps." : ""}`.trim()}
+      aria-keyshortcuts={editable ? "ArrowUp ArrowDown ArrowLeft ArrowRight" : undefined}
+      onKeyDown={keyboardMove}
+      onClickCapture={(event) => {
+        if (!suppressClick.current) return;
+        event.preventDefault();
+        event.stopPropagation();
+        suppressClick.current = false;
+      }}
+      onFocus={(event) => {
+        if (event.target === event.currentTarget) select();
+      }}
+      onClick={() => {
+        if (suppressClick.current) {
+          suppressClick.current = false;
+          return;
+        }
+        select();
+      }}
     >
+      {remoteGeometry && (
+        <div className="remote-geometry-outline" aria-hidden="true">
+          <Avatar identity={{ displayName: remoteGeometry.label, username: remoteGeometry.username, profileImageUrl: remoteGeometry.profileImageUrl }} size="small" style={collaboratorStyle(remoteGeometry.userId)} />
+          <small>{remoteGeometry.label} is {remoteGeometry.operation === 0 ? "moving" : "resizing"}</small>
+        </div>
+      )}
+      <NoteEditingIndicator editors={editors} />
       <div
         className={`note-head ${editable ? "drag-handle" : ""}`}
         onPointerDown={down}
@@ -890,6 +867,11 @@ function NoteCard({
         onPointerUp={up}
         onPointerCancel={cancelDrag}
       >
+        {editable && (
+          <span className="note-drag-grip" title="Drag note" aria-hidden="true">
+            <GripVertical size={15} />
+          </span>
+        )}
         <span className="note-type">
           {note.kind === 1 ? (
             <ListChecks size={13} />
@@ -898,36 +880,51 @@ function NoteCard({
           )}
         </span>
         <strong>
-          <InlineText
-            value={note.title}
+          <InlineNoteText
+            note={note}
+            field="title"
             label={note.kind === 1 ? "Task title" : "Note title"}
             editable={editable}
             autoEdit={autoEditTitle}
             activation="click"
             onSave={editTitle}
+            onEditingChange={(active) => editingChanged(note.id, active)}
           />
         </strong>
+        <IconButton
+          label={`Open properties for ${note.title}`}
+          className="note-properties"
+          onClick={(event) => {
+            event.stopPropagation();
+            openProperties(event.currentTarget);
+          }}
+        >
+          <Settings2 size={16} aria-hidden="true" />
+        </IconButton>
       </div>
       {note.kind === 1 ? (
         <div className="checklist">
           {items.map((item) => (
             <div key={item.id} className={`checklist-row ${item.isCompleted ? "checked" : ""}`}>
-              <input
-                type="checkbox"
-                aria-label={`Complete ${item.title}`}
-                checked={item.isCompleted}
-                disabled={!editable}
-                onChange={() => toggle(item)}
-                onClick={(e) => e.stopPropagation()}
-              />
-              <InlineText
-                value={item.title}
+              <label className="wk-checkbox-target" onClick={(event) => event.stopPropagation()}>
+                <input
+                  type="checkbox"
+                  aria-label={`Complete ${item.title}`}
+                  checked={item.isCompleted}
+                  disabled={!editable}
+                  onChange={() => toggle(item)}
+                />
+              </label>
+              <InlineNoteText
+                note={item}
+                field="title"
                 label="Checklist item title"
                 editable={editable}
                 onSave={(title) => editItem(item, title)}
+                onEditingChange={(active) => editingChanged(note.id, active)}
               />
               {editable && (confirmRemove === item.id ? (
-                <>
+                <span className="checklist-confirm">
                   <button className="task-action" onClick={(e) => {
                     e.stopPropagation();
                     setConfirmRemove(null);
@@ -936,13 +933,13 @@ function NoteCard({
                     e.stopPropagation();
                     setConfirmRemove(null);
                     removeItem(item);
-                  }}>Confirm</button>
-                </>
+                  }}>Confirm delete</button>
+                </span>
               ) : (
                 <button className="task-action" aria-label={`Delete ${item.title}`} onClick={(e) => {
                   e.stopPropagation();
                   setConfirmRemove(item.id);
-                }}>×</button>
+                }}><X size={16} aria-hidden="true" /></button>
               ))}
             </div>
           ))}
@@ -956,13 +953,18 @@ function NoteCard({
                 maxLength={200}
                 value={itemDraft}
                 onChange={(e) => setItemDraft(e.target.value)}
-                onBlur={submitItem}
+                onFocus={() => editingChanged(note.id, true)}
+                onBlur={() => {
+                  editingChanged(note.id, false);
+                  submitItem();
+                }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
                     e.currentTarget.blur();
                   } else if (e.key === "Escape") {
                     addingDone.current = true;
+                    editingChanged(note.id, false);
                     setAddingItem(false);
                     setItemDraft("");
                   }
@@ -995,7 +997,22 @@ function NoteCard({
           </small>
         </div>
       ) : (
-        <p>{note.content}</p>
+        <div className="note-body">
+          <InlineNoteText
+            note={note}
+            field="content"
+            label="Note body"
+            editable={editable}
+            activation="click"
+            onSave={editContent}
+            onEditingChange={(active) => editingChanged(note.id, active)}
+          />
+        </div>
+      )}
+      {textDraft && (
+        <span className={`note-draft-state ${textDraft.recovery === "stale" ? "is-stale" : ""}`}>
+          {textDraft.recovery === "stale" ? "Draft needs review" : "Unsaved draft"}
+        </span>
       )}
       {editable && (
         <>
@@ -1019,6 +1036,7 @@ function NoteCard({
             className="resize-handle"
             type="button"
             aria-label={`Resize ${note.title}`}
+            title="Drag to resize"
             onPointerDown={(event) => {
               event.stopPropagation();
               if (event.button !== 0) return;
@@ -1029,6 +1047,7 @@ function NoteCard({
                 height: note.height,
                 last: {},
               };
+              cancelGeometry();
               event.currentTarget.setPointerCapture(event.pointerId);
             }}
             onPointerMove={resizeMove}
@@ -1043,13 +1062,14 @@ function NoteCard({
   );
 }
 
-function Editor({
+function PropertiesEditor({
   note,
+  items,
+  children,
   visualColor,
   visualWidth,
   visualHeight,
   editable,
-  patch,
   removeNote,
   deleted,
   preview,
@@ -1060,11 +1080,12 @@ function Editor({
   notify,
 }: {
   note: NoteDto;
+  items: NoteDto[];
+  children: React.ReactNode;
   visualColor: string;
   visualWidth: number;
   visualHeight: number;
   editable: boolean;
-  patch: (id: string, changes: PatchNote) => Promise<NoteDto>;
   removeNote: (id: string) => Promise<void>;
   deleted: (id: string) => void;
   preview: (id: string, patch: VisualPatch) => void;
@@ -1074,42 +1095,27 @@ function Editor({
   failed: (id: string, cause: unknown) => void;
   notify: (m: string) => void;
 }) {
-  const [title, setTitle] = useState(note.title),
-    [content, setContent] = useState(note.content),
-    [width, setWidth] = useState(String(note.width)),
-    [height, setHeight] = useState(String(note.height)),
+  const textDraft = useNoteDraft(note.id);
+  const sourceBounds = noteDimensionBounds(note, items);
+  const displayedWidth = clampDimension(note.width, sourceBounds.minWidth, sourceBounds.maxWidth);
+  const displayedBounds = noteDimensionBounds(note, items, displayedWidth);
+  const displayedHeight = clampDimension(note.height, displayedBounds.minHeight, displayedBounds.maxHeight);
+  const [width, setWidth] = useState(String(displayedWidth)),
+    [height, setHeight] = useState(String(displayedHeight)),
     [busy, setBusy] = useState(false),
     [confirmDelete, setConfirmDelete] = useState(false);
+  const candidateWidth = Number(width);
+  const bounds = noteDimensionBounds(note, items, Number.isFinite(candidateWidth) && width ? candidateWidth : displayedWidth);
   useEffect(() => {
-    setTitle(note.title);
-    setContent(note.content);
-  }, [note.title, note.content]);
-  useEffect(() => {
-    setWidth(String(note.width));
-    setHeight(String(note.height));
-  }, [note.width, note.height]);
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    const changes: PatchNote = {};
-    if (title.trim() !== note.title) changes.title = title.trim();
-    if (content !== note.content) changes.content = content;
-    if (!Object.keys(changes).length) return;
-    setBusy(true);
-    try {
-      await patch(note.id, changes);
-      notify("Note saved");
-    } catch (cause) {
-      failed(note.id, cause);
-    } finally {
-      setBusy(false);
-    }
-  }
+    setWidth(String(displayedWidth));
+    setHeight(String(displayedHeight));
+  }, [displayedWidth, displayedHeight]);
   async function remove() {
     setBusy(true);
     try {
       await removeNote(note.id);
       deleted(note.id);
-      notify("Note deleted");
+      notify(note.kind === 1 ? "Task list deleted" : "Note deleted");
     } catch (cause) {
       failed(note.id, cause);
     } finally {
@@ -1120,131 +1126,524 @@ function Editor({
     if (field === "width") setWidth(value);
     else setHeight(value);
     const number = Number(value);
-    const minimum = field === "width" ? minNoteWidth : minNoteHeight;
-    if (value && Number.isFinite(number) && number >= minimum)
-      preview(note.id, { [field]: number });
+    if (!value || !Number.isFinite(number)) return;
+    const nextBounds = field === "width" ? sourceBounds : bounds;
+    preview(note.id, { [field]: clampDimension(number,
+      field === "width" ? nextBounds.minWidth : nextBounds.minHeight,
+      field === "width" ? nextBounds.maxWidth : nextBounds.maxHeight) });
   }
   function finishDimension(field: "width" | "height") {
     const value = field === "width" ? width : height;
     const number = Number(value);
-    const minimum = field === "width" ? minNoteWidth : minNoteHeight;
-    if (!value || !Number.isFinite(number) || number < minimum) {
+    if (!value || !Number.isFinite(number)) {
       cancelPreview(note.id, { [field]: field === "width" ? visualWidth : visualHeight });
-      if (field === "width") setWidth(String(note.width));
-      else setHeight(String(note.height));
+      if (field === "width") setWidth(String(displayedWidth));
+      else setHeight(String(displayedHeight));
       return;
     }
-    if (number !== note[field]) void commitVisual(note.id, { [field]: number });
+    const nextWidth = field === "width"
+      ? clampDimension(number, sourceBounds.minWidth, sourceBounds.maxWidth)
+      : clampDimension(Number(width) || displayedWidth, sourceBounds.minWidth, sourceBounds.maxWidth);
+    const nextBounds = noteDimensionBounds(note, items, nextWidth);
+    const nextHeight = field === "height"
+      ? clampDimension(number, nextBounds.minHeight, nextBounds.maxHeight)
+      : clampDimension(note.height, nextBounds.minHeight, nextBounds.maxHeight);
+    const changes: VisualPatch = field === "width" ? { width: nextWidth } : { height: nextHeight };
+    if (field === "width") {
+      setWidth(String(nextWidth));
+      if (nextHeight !== note.height) changes.height = nextHeight;
+    } else setHeight(String(nextHeight));
+    if (Object.entries(changes).some(([key, next]) => note[key as "width" | "height"] !== next))
+      void commitVisual(note.id, changes);
   }
   return (
-    <form className="note-editor" onSubmit={submit}>
-      <h3>{note.kind === 1 ? "Task list" : "Note"}</h3>
-      <label>
-        Title
-        <input
-          value={title}
-          maxLength={200}
-          disabled={!editable}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-      </label>
-      <label>
-        Content
-        <textarea
-          value={content}
-          disabled={!editable}
-          onChange={(e) => setContent(e.target.value)}
-        />
-      </label>
+    <div className="note-editor">
+      <div className="note-properties-intro">
+        <span className="inspector-object-kind">{note.kind === 1 ? "Task list" : "Note"}</span>
+        <p>
+          {note.kind === 1
+            ? "Edit the title, checklist items, and completion directly on the card."
+            : "Edit the title and body directly on the card."}
+        </p>
+      </div>
+      {textDraft && (
+        <div className={`draft-recovery ${textDraft.recovery === "stale" ? "is-stale" : ""}`} role={textDraft.recovery === "stale" ? "alert" : "status"}>
+          <strong>{textDraft.recovery === "stale" ? "Local draft retained" : "Unsaved text retained"}</strong>
+          <p>
+            {textDraft.recovery === "stale"
+              ? "A newer saved version exists. Your local text remains on the card for review and retry."
+              : "This draft is kept for this browser session until it saves successfully."}
+          </p>
+        </div>
+      )}
       {editable && (
-        <>
-          <label>
-            Color
-            <input
-              type="color"
-              value={visualColor.slice(0, 7)}
-              onChange={(e) => changeColor(note.id, e.target.value)}
-            />
-          </label>
-          <div className="dimension-row">
-            <label>
-              Width
-              <input
-                type="number"
-                min={minNoteWidth}
-                value={width}
-                onChange={(e) => setDimension("width", e.target.value)}
-                onBlur={() => finishDimension("width")}
-              />
-            </label>
-            <label>
-              Height
-              <input
-                type="number"
-                min={minNoteHeight}
-                value={height}
-                onChange={(e) => setDimension("height", e.target.value)}
-                onBlur={() => finishDimension("height")}
-              />
-            </label>
+        <section className="inspector-section" aria-labelledby={`appearance-${note.id}`}>
+          <h3 id={`appearance-${note.id}`}>Appearance</h3>
+          <div className="note-edit-fields">
+            <fieldset className="note-color-field">
+              <legend>Color</legend>
+              <div className="note-color-options">
+                {notePigments.map((pigment) => (
+                  <button
+                    key={pigment.value}
+                    className="note-color-option"
+                    type="button"
+                    aria-label={`Use ${pigment.name.toLowerCase()} note color`}
+                    aria-pressed={visualColor.slice(0, 7).toUpperCase() === pigment.value}
+                    style={{ backgroundColor: pigment.value }}
+                    onClick={() => changeColor(note.id, pigment.value)}
+                  />
+                ))}
+              </div>
+            </fieldset>
+            <div className="dimension-row">
+              <label>
+                Width
+                <input
+                  type="number"
+                  min={bounds.minWidth}
+                  max={bounds.maxWidth}
+                  step={8}
+                  inputMode="numeric"
+                  value={width}
+                  onChange={(e) => setDimension("width", e.target.value)}
+                  onBlur={() => finishDimension("width")}
+                />
+              </label>
+              <label>
+                Height
+                <input
+                  type="number"
+                  min={bounds.minHeight}
+                  max={bounds.maxHeight}
+                  step={8}
+                  inputMode="numeric"
+                  value={height}
+                  onChange={(e) => setDimension("height", e.target.value)}
+                  onBlur={() => finishDimension("height")}
+                />
+              </label>
+            </div>
+            <p className="dimension-help">Width {bounds.minWidth}–{bounds.maxWidth}px · Height {bounds.minHeight}–{bounds.maxHeight}px. The minimum adapts to the card's content.</p>
           </div>
+        </section>
+      )}
+      {children}
+      <section className="inspector-section inspector-details" aria-labelledby={`details-${note.id}`}>
+        <h3 id={`details-${note.id}`}>Details</h3>
+        <dl>
+          <div><dt>Type</dt><dd>{note.kind === 1 ? "Board task list" : "Board note"}</dd></div>
+          <div><dt>Created</dt><dd><time dateTime={note.createdAt}>{new Date(note.createdAt).toLocaleDateString()}</time></dd></div>
+        </dl>
+      </section>
+      {editable && (
+        <section className="inspector-section inspector-danger" aria-labelledby={`danger-${note.id}`}>
+          <h3 id={`danger-${note.id}`}>Danger zone</h3>
           <div className="editor-actions">
-            <button
-              className="primary-button"
-              disabled={busy || !title.trim()}
-            >
-              Save
-            </button>
             {confirmDelete ? (
               <>
-                <button type="button" className="soft-button" onClick={() => setConfirmDelete(false)}>Cancel</button>
-                <button type="button" className="soft-button danger" disabled={busy} onClick={() => void remove()}>Confirm delete</button>
+                <Button variant="quiet" onClick={() => setConfirmDelete(false)}>Cancel</Button>
+                <Button variant="danger" disabled={busy} onClick={() => void remove()}>Confirm delete</Button>
               </>
             ) : (
-              <button type="button" className="soft-button" disabled={busy} onClick={() => setConfirmDelete(true)}>Delete</button>
+              <Button variant="danger" disabled={busy} onClick={() => setConfirmDelete(true)}>Delete</Button>
             )}
           </div>
-        </>
+        </section>
       )}
-    </form>
+    </div>
   );
 }
 
-function Workspace({
+function InspectorFrame({
+  title,
+  presentation,
+  close,
+  children,
+}: {
+  title: string;
+  presentation: "desktop" | "tablet" | "mobile";
+  close: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <aside
+      className={`editor-panel editor-panel--${presentation}`}
+      aria-label={title}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          close();
+        }
+      }}
+    >
+      <div className="panel-head">
+        <h2>{title}</h2>
+        <IconButton label="Close properties" autoFocus onClick={close}>
+          <X size={18} aria-hidden="true" />
+        </IconButton>
+      </div>
+      <div className="editor-panel-content">{children}</div>
+    </aside>
+  );
+}
+
+type WorkspaceProps = {
+  id: string;
+  titleOverride?: string;
+  currentUserId: string;
+  profileIdentityVersion: string;
+  back: () => void;
+  boardLoaded: (board: BoardDetailDto) => void;
+  notify: (message: string) => void;
+};
+
+function Workspace(props: WorkspaceProps) {
+  return (
+    <EditorStateProvider userId={props.currentUserId} boardId={props.id}>
+      <WorkspaceContent {...props} />
+    </EditorStateProvider>
+  );
+}
+
+function WorkspaceContent({
   id,
+  titleOverride,
+  currentUserId,
+  profileIdentityVersion,
   back,
   boardLoaded,
   notify,
-}: {
-  id: string;
-  back: () => void;
-  boardLoaded: (b: BoardDto) => void;
-  notify: (m: string) => void;
-}) {
-  const [board, setBoard] = useState<BoardDto | null>(null),
+}: WorkspaceProps) {
+  const editor = useEditorActions();
+  const editorNavigation = useEditorNavigation();
+  const selected = editorNavigation.selectedNoteId;
+  const [board, setBoard] = useState<BoardDetailDto | null>(null),
     [notes, setNotes] = useState<NoteDto[]>([]),
     [edges, setEdges] = useState<ConnectionDto[]>([]),
     [members, setMembers] = useState<MemberDto[]>([]);
   const [loading, setLoading] = useState(true),
     [failure, setFailure] = useState(""),
-    [selected, setSelected] = useState<string | null>(null),
     [editTitleId, setEditTitleId] = useState<string | null>(null),
     [panel, setPanel] = useState<Panel>(null),
     [connecting, setConnecting] = useState(false),
     [type, setType] = useState<0 | 1>(0),
     [conflicted, setConflicted] = useState<string | null>(null),
+    [conflictLatest, setConflictLatest] = useState<NoteDto | null>(null),
     [visuals, setVisuals] = useState<Record<string, VisualPatch>>({}),
-    [connectionDraft, setConnectionDraft] = useState<ConnectionDraft | null>(null);
+    [remotePreviews, setRemotePreviews] = useState<Record<string, NoteGeometryPreviewEvent>>({}),
+    [remoteEditing, setRemoteEditing] = useState<NoteEditingByNote>({}),
+    [presence, setPresence] = useState<BoardPresenceSnapshot | null>(null),
+    [connectionDraft, setConnectionDraft] = useState<ConnectionDraft | null>(null),
+    [connectionTargetId, setConnectionTargetId] = useState("");
+  const realtimeStatus = useSyncExternalStore(
+    realtimeConnection.subscribe,
+    realtimeConnection.getSnapshot,
+  );
+  const [cursorStore] = useState(() => new CursorRenderStore());
+  useEffect(() => {
+    void boardApi.members(id).then(setMembers).catch(() => undefined);
+  }, [id, profileIdentityVersion]);
   const notesRef = useRef<NoteDto[]>([]);
+  const permissionRef = useRef<boolean | null>(null);
+  const noteTombstones = useRef(new Map<string, number>());
   const mutationQueues = useRef(new Map<string, Promise<void>>());
   const blockedNotes = useRef(new Set<string>());
   const colorTimers = useRef(new Map<string, { timer: ReturnType<typeof setTimeout>; color: string }>());
   const draftRef = useRef<ConnectionDraft | null>(null);
+  const geometrySequence = useRef(0);
+  const remotePreviewsRef = useRef<Record<string, NoteGeometryPreviewEvent>>({});
+  const remotePreviewEnds = useRef(new Map<string, number>());
+  const remotePreviewTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const remoteEditingRef = useRef<NoteEditingByNote>({});
+  const remoteEditingTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const editingSequence = useRef(0);
+  const cursorSequence = useRef(0);
+  const remoteCursorsRef = useRef<BoardCursorsByConnection>({});
+  const remoteCursorEnds = useRef(new Map<string, number>());
+  const remoteCursorTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const localCursor = useRef<{
+    active: boolean;
+    lastSentAt: number;
+    pending: { x: number; y: number } | null;
+    timer: ReturnType<typeof setTimeout> | null;
+  }>({ active: false, lastSentAt: 0, pending: null, timer: null });
+  const localEditing = useRef<{
+    noteId: string;
+    renewal: ReturnType<typeof setInterval> | null;
+    pendingStop: ReturnType<typeof setTimeout> | null;
+  } | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const publishNotes = useCallback((update: (current: NoteDto[]) => NoteDto[]) => {
     const next = update(notesRef.current);
     notesRef.current = next;
     setNotes(next);
+  }, []);
+  const clearRemotePreview = useCallback((noteId: string) => {
+    const timer = remotePreviewTimers.current.get(noteId);
+    if (timer) clearTimeout(timer);
+    remotePreviewTimers.current.delete(noteId);
+    if (!remotePreviewsRef.current[noteId]) return;
+    const next = { ...remotePreviewsRef.current };
+    delete next[noteId];
+    remotePreviewsRef.current = next;
+    setRemotePreviews(next);
+  }, []);
+  const clearAllRemotePreviews = useCallback(() => {
+    for (const timer of remotePreviewTimers.current.values()) clearTimeout(timer);
+    remotePreviewTimers.current.clear();
+    remotePreviewsRef.current = {};
+    setRemotePreviews({});
+  }, []);
+  const clearAllRemoteEditing = useCallback(() => {
+    for (const timer of remoteEditingTimers.current.values()) clearTimeout(timer);
+    remoteEditingTimers.current.clear();
+    remoteEditingRef.current = {};
+    setRemoteEditing({});
+  }, []);
+  const clearAllRemoteCursors = useCallback(() => {
+    for (const timer of remoteCursorTimers.current.values()) clearTimeout(timer);
+    remoteCursorTimers.current.clear();
+    remoteCursorsRef.current = {};
+    remoteCursorEnds.current.clear();
+    cursorStore.set({});
+  }, [cursorStore]);
+  const clearRemoteEditingForNote = useCallback((noteId: string) => {
+    const current = remoteEditingRef.current[noteId];
+    if (!current) return;
+    for (const connectionId of Object.keys(current)) {
+      const key = `${noteId}:${connectionId}`;
+      const timer = remoteEditingTimers.current.get(key);
+      if (timer) clearTimeout(timer);
+      remoteEditingTimers.current.delete(key);
+    }
+    const next = { ...remoteEditingRef.current };
+    delete next[noteId];
+    remoteEditingRef.current = next;
+    setRemoteEditing(next);
+  }, []);
+  const acceptRemoteEditing = useCallback((incoming: NoteEditingStartedEvent) => {
+    const next = applyEditingStarted(remoteEditingRef.current, incoming);
+    if (next === remoteEditingRef.current) return;
+    remoteEditingRef.current = next;
+    setRemoteEditing(next);
+    const key = `${incoming.noteId}:${incoming.connectionId}`;
+    const previous = remoteEditingTimers.current.get(key);
+    if (previous) clearTimeout(previous);
+    const parsedExpiry = Date.parse(incoming.expiresAt);
+    const remaining = Number.isFinite(parsedExpiry)
+      ? Math.min(8_000, Math.max(0, parsedExpiry - Date.now()))
+      : 7_000;
+    const timer = setTimeout(() => {
+      const expired: NoteEditingStoppedEvent = {
+        boardId: incoming.boardId,
+        noteId: incoming.noteId,
+        userId: incoming.userId,
+        connectionId: incoming.connectionId,
+        sequence: incoming.sequence,
+      };
+      const expiredState = applyEditingStopped(remoteEditingRef.current, expired);
+      if (expiredState !== remoteEditingRef.current) {
+        remoteEditingRef.current = expiredState;
+        setRemoteEditing(expiredState);
+      }
+      remoteEditingTimers.current.delete(key);
+    }, remaining);
+    remoteEditingTimers.current.set(key, timer);
+  }, []);
+  const endRemoteEditing = useCallback((incoming: NoteEditingStoppedEvent) => {
+    const next = applyEditingStopped(remoteEditingRef.current, incoming);
+    if (next === remoteEditingRef.current) return;
+    remoteEditingRef.current = next;
+    setRemoteEditing(next);
+    const key = `${incoming.noteId}:${incoming.connectionId}`;
+    const timer = remoteEditingTimers.current.get(key);
+    if (timer) clearTimeout(timer);
+    remoteEditingTimers.current.delete(key);
+  }, []);
+  const stopLocalEditingNow = useCallback((noteId?: string) => {
+    const active = localEditing.current;
+    if (!active || (noteId && active.noteId !== noteId)) return;
+    if (active.pendingStop) clearTimeout(active.pendingStop);
+    if (active.renewal) clearInterval(active.renewal);
+    localEditing.current = null;
+    const sequence = ++editingSequence.current;
+    void realtimeConnection.stopNoteEditing(id, active.noteId, sequence);
+  }, [id]);
+  const beginEditing = useCallback((noteId: string) => {
+    const current = localEditing.current;
+    if (current?.noteId === noteId) {
+      if (current.pendingStop) clearTimeout(current.pendingStop);
+      current.pendingStop = null;
+      return;
+    }
+    if (current) stopLocalEditingNow();
+    const sequence = ++editingSequence.current;
+    void realtimeConnection.startNoteEditing(id, noteId, sequence);
+    const active = {
+      noteId,
+      renewal: null as ReturnType<typeof setInterval> | null,
+      pendingStop: null,
+    };
+    active.renewal = setInterval(() => {
+      if (localEditing.current !== active) return;
+      const renewalSequence = ++editingSequence.current;
+      void realtimeConnection.startNoteEditing(id, noteId, renewalSequence);
+    }, 3_000);
+    localEditing.current = active;
+  }, [id, stopLocalEditingNow]);
+  const finishEditing = useCallback((noteId: string, immediate = false) => {
+    const active = localEditing.current;
+    if (!active || active.noteId !== noteId) return;
+    if (immediate) {
+      stopLocalEditingNow(noteId);
+      return;
+    }
+    if (active.pendingStop) return;
+    active.pendingStop = setTimeout(() => stopLocalEditingNow(noteId), 0);
+  }, [stopLocalEditingNow]);
+  const editingChanged = useCallback((noteId: string, active: boolean) => {
+    if (active) beginEditing(noteId);
+    else finishEditing(noteId);
+  }, [beginEditing, finishEditing]);
+  const reannounceLocalEditing = useCallback(() => {
+    const active = localEditing.current;
+    if (!active) return;
+    const sequence = ++editingSequence.current;
+    void realtimeConnection.startNoteEditing(id, active.noteId, sequence);
+  }, [id]);
+  const acceptRemoteCursor = useCallback((incoming: BoardCursorMovedEvent) => {
+    if (incoming.userId === currentUserId) return;
+    if (!shouldAcceptCursorMoved(
+      remoteCursorsRef.current[incoming.connectionId],
+      incoming,
+      remoteCursorEnds.current.get(incoming.connectionId),
+    )) return;
+    const next = applyCursorMoved(remoteCursorsRef.current, incoming);
+    if (next === remoteCursorsRef.current) return;
+    remoteCursorsRef.current = next;
+    cursorStore.set(next);
+    const previous = remoteCursorTimers.current.get(incoming.connectionId);
+    if (previous) clearTimeout(previous);
+    const parsedExpiry = Date.parse(incoming.expiresAt);
+    const remaining = Number.isFinite(parsedExpiry)
+      ? Math.min(2_000, Math.max(0, parsedExpiry - Date.now()))
+      : 1_500;
+    const timer = setTimeout(() => {
+      const expired: BoardCursorStoppedEvent = {
+        boardId: incoming.boardId,
+        userId: incoming.userId,
+        connectionId: incoming.connectionId,
+        sequence: incoming.sequence,
+      };
+      const expiredState = applyCursorStopped(remoteCursorsRef.current, expired);
+      remoteCursorEnds.current.set(incoming.connectionId, incoming.sequence);
+      if (expiredState !== remoteCursorsRef.current) {
+        remoteCursorsRef.current = expiredState;
+        cursorStore.set(expiredState);
+      }
+      remoteCursorTimers.current.delete(incoming.connectionId);
+    }, remaining);
+    remoteCursorTimers.current.set(incoming.connectionId, timer);
+  }, [currentUserId, cursorStore]);
+  const endRemoteCursor = useCallback((incoming: BoardCursorStoppedEvent) => {
+    remoteCursorEnds.current.set(incoming.connectionId, Math.max(
+      remoteCursorEnds.current.get(incoming.connectionId) ?? -1,
+      incoming.sequence));
+    const next = applyCursorStopped(remoteCursorsRef.current, incoming);
+    if (next === remoteCursorsRef.current) return;
+    remoteCursorsRef.current = next;
+    cursorStore.set(next);
+    const timer = remoteCursorTimers.current.get(incoming.connectionId);
+    if (timer) clearTimeout(timer);
+    remoteCursorTimers.current.delete(incoming.connectionId);
+  }, [cursorStore]);
+  const stopLocalCursor = useCallback(() => {
+    const state = localCursor.current;
+    if (state.timer) clearTimeout(state.timer);
+    state.timer = null;
+    state.pending = null;
+    if (!state.active) return;
+    state.active = false;
+    const sequence = ++cursorSequence.current;
+    void realtimeConnection.stopBoardCursor(id, sequence);
+  }, [id]);
+  const flushLocalCursor = useCallback(() => {
+    const state = localCursor.current;
+    state.timer = null;
+    const position = state.pending;
+    if (!position || !state.active) return;
+    state.pending = null;
+    state.lastSentAt = performance.now();
+    const sequence = ++cursorSequence.current;
+    void realtimeConnection.moveBoardCursor(id, position.x, position.y, sequence);
+  }, [id]);
+  const moveLocalCursor = useCallback((event: Pointer<HTMLDivElement>) => {
+    const canvas = canvasRef.current;
+    const rect = canvas?.getBoundingClientRect();
+    if (!canvas || !rect || realtimeConnection.getSnapshot() !== "connected") return;
+    const state = localCursor.current;
+    state.active = true;
+    state.pending = clientPointToBoard(
+      rect,
+      { left: canvas.scrollLeft, top: canvas.scrollTop },
+      { x: event.clientX, y: event.clientY },
+    );
+    const remaining = 75 - (performance.now() - state.lastSentAt);
+    if (remaining <= 0 && state.timer === null) {
+      flushLocalCursor();
+      return;
+    }
+    if (state.timer === null)
+      state.timer = setTimeout(flushLocalCursor, Math.max(0, remaining));
+  }, [flushLocalCursor]);
+  const acceptRemotePreview = useCallback((incoming: NoteGeometryPreviewEvent) => {
+    const note = notesRef.current.find((candidate) => candidate.id === incoming.noteId);
+    const senderKey = `${incoming.noteId}:${incoming.connectionId}`;
+    if (!note || note.kind === 2 || !shouldAcceptGeometryPreview(
+        remotePreviewsRef.current[incoming.noteId],
+        incoming,
+        note.version,
+        remotePreviewEnds.current.get(senderKey))) return;
+
+    const next = { ...remotePreviewsRef.current, [incoming.noteId]: incoming };
+    remotePreviewsRef.current = next;
+    setRemotePreviews(next);
+    const previousTimer = remotePreviewTimers.current.get(incoming.noteId);
+    if (previousTimer) clearTimeout(previousTimer);
+    const timer = setTimeout(() => {
+      const current = remotePreviewsRef.current[incoming.noteId];
+      if (current?.connectionId === incoming.connectionId &&
+          current.sequence === incoming.sequence) {
+        remotePreviewEnds.current.set(senderKey, incoming.sequence);
+        clearRemotePreview(incoming.noteId);
+      }
+    }, 1_500);
+    remotePreviewTimers.current.set(incoming.noteId, timer);
+  }, [clearRemotePreview]);
+  const endRemotePreview = useCallback((ended: NoteGeometryPreviewEndedEvent) => {
+    const senderKey = `${ended.noteId}:${ended.connectionId}`;
+    remotePreviewEnds.current.set(senderKey, Math.max(
+      remotePreviewEnds.current.get(senderKey) ?? -1,
+      ended.sequence));
+    if (shouldEndGeometryPreview(remotePreviewsRef.current[ended.noteId], ended))
+      clearRemotePreview(ended.noteId);
+  }, [clearRemotePreview]);
+  const mergeAuthoritativeNote = useCallback((incoming: NoteDto) => {
+    editor.reconcileAuthoritative(incoming);
+    const current = notesRef.current.find((note) => note.id === incoming.id);
+    if (shouldClearGeometryPreview(current?.version, incoming.version))
+      clearRemotePreview(incoming.id);
+    publishNotes((current) => mergeVersionedNote(
+      current,
+      incoming,
+      noteTombstones.current.get(incoming.id),
+    ));
+  }, [clearRemotePreview, editor, publishNotes]);
+  const mergeConnection = useCallback((incoming: ConnectionDto) => {
+    setEdges((current) => current.some((edge) => edge.id === incoming.id)
+      ? current
+      : [...current, incoming]);
   }, []);
   const preview = useCallback((noteId: string, patch: VisualPatch) => {
     setVisuals((current) => ({
@@ -1252,6 +1651,29 @@ function Workspace({
       [noteId]: { ...current[noteId], ...patch },
     }));
   }, []);
+  const broadcastGeometry = useCallback((
+    noteId: string,
+    baseVersion: number,
+    operation: NoteGeometryOperation,
+    patch: VisualPatch,
+  ) => {
+    const sequence = ++geometrySequence.current;
+    void realtimeConnection.sendNoteGeometryPreview({
+      boardId: id,
+      noteId,
+      operation,
+      x: operation === 0 ? patch.positionX ?? null : null,
+      y: operation === 0 ? patch.positionY ?? null : null,
+      width: operation === 1 ? patch.width ?? null : null,
+      height: operation === 1 ? patch.height ?? null : null,
+      baseVersion,
+      sequence,
+    });
+    return sequence;
+  }, [id]);
+  const endGeometry = useCallback((noteId: string, sequence: number) => {
+    void realtimeConnection.endNoteGeometryPreview(id, noteId, sequence);
+  }, [id]);
   const cancelPreview = useCallback((noteId: string, patch: VisualPatch) => {
     setVisuals((current) => {
       if (!current[noteId]) return current;
@@ -1294,8 +1716,9 @@ function Workspace({
     enqueueNote(noteId, async (current) => {
       const updated = await noteApi.patch(id, noteId, current.version, changes);
       publishNotes((all) => all.map((note) => note.id === noteId ? updated : note));
+      editor.reconcileSaved(updated);
       return updated;
-    }), [enqueueNote, id, publishNotes]);
+    }), [editor, enqueueNote, id, publishNotes]);
   const deleteNote = useCallback((noteId: string) =>
     enqueueNote(noteId, async (current) => {
       await noteApi.remove(id, noteId, current.version);
@@ -1307,11 +1730,16 @@ function Workspace({
         delete next[noteId];
         return next;
       });
-    }), [enqueueNote, id, publishNotes]);
+      editor.removeNote(noteId);
+    }), [editor, enqueueNote, id, publishNotes]);
   const failed = useCallback((noteId: string, cause: unknown) => {
-    if (isConflict(cause)) setConflicted(noteId);
+    if (isConflict(cause)) {
+      editor.markConflict(noteId);
+      setConflictLatest(null);
+      setConflicted(noteId);
+    }
     notify(errorMessage(cause));
-  }, [notify]);
+  }, [editor, notify]);
   const commitVisual = useCallback(async (noteId: string, changes: VisualPatch) => {
     try {
       await patchNote(noteId, changes);
@@ -1331,8 +1759,8 @@ function Workspace({
     }, 250);
     colorTimers.current.set(noteId, { timer, color });
   }
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     setFailure("");
     try {
       const [b, n, e, m] = await Promise.all([
@@ -1342,29 +1770,211 @@ function Workspace({
         boardApi.members(id),
       ]);
       setBoard(b);
+      permissionRef.current = b.canEdit;
       notesRef.current = n;
       setNotes(n);
+      editor.hydrate(n);
       setEdges(e);
       setMembers(m);
-      setVisuals({});
+      if (showLoading) setVisuals({});
+      clearAllRemotePreviews();
+      clearAllRemoteEditing();
+      clearAllRemoteCursors();
+      remotePreviewEnds.current.clear();
+      noteTombstones.current.clear();
       blockedNotes.current.clear();
       boardLoaded(b);
     } catch (cause) {
+      if (cause instanceof AuthApiError && cause.status === 404) {
+        editor.clearBoard();
+        if (!showLoading) {
+          notify("Your access to this board is no longer available.");
+          back();
+          return;
+        }
+      }
       setFailure(errorMessage(cause));
+      throw cause;
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
-  }, [id, boardLoaded]);
+  }, [back, id, boardLoaded, clearAllRemoteCursors, clearAllRemoteEditing, clearAllRemotePreviews, editor, notify]);
   useEffect(() => {
-    void load();
+    void load().catch(() => undefined);
   }, [load]);
+  useEffect(() => realtimeConnection.onReconnected(() => load(false)), [load]);
+  useEffect(() => realtimeConnection.onPresence((incoming) => {
+    if (incoming.boardId !== id) return;
+    setPresence((current) => mergePresenceSnapshot(current, incoming));
+  }), [id]);
+  useEffect(() => realtimeConnection.subscribe(() => {
+    if (realtimeConnection.getSnapshot() !== "connected") {
+      setPresence(null);
+      clearAllRemoteEditing();
+      clearAllRemoteCursors();
+      stopLocalCursor();
+      return;
+    }
+    reannounceLocalEditing();
+  }), [clearAllRemoteCursors, clearAllRemoteEditing, reannounceLocalEditing, stopLocalCursor]);
+  useEffect(() => {
+    const cleanups = [
+      realtimeConnection.on<NoteChangedEvent>(realtimeEvents.noteCreated, (message) => {
+        if (message.boardId === id) mergeAuthoritativeNote(message);
+      }),
+      realtimeConnection.on<NoteChangedEvent>(realtimeEvents.noteUpdated, (message) => {
+        if (message.boardId === id) mergeAuthoritativeNote(message);
+      }),
+      realtimeConnection.on<NoteDeletedEvent>(realtimeEvents.noteDeleted, (message) => {
+        if (message.boardId !== id) return;
+        clearRemotePreview(message.noteId);
+        clearRemoteEditingForNote(message.noteId);
+        const previous = noteTombstones.current.get(message.noteId) ?? -1;
+        noteTombstones.current.set(message.noteId, Math.max(previous, message.version));
+        publishNotes((current) => removeVersionedNote(
+          current, message.noteId, message.version));
+        setEdges((current) => current.filter((edge) =>
+          edge.sourceNoteId !== message.noteId && edge.targetNoteId !== message.noteId));
+        setVisuals((current) => {
+          if (!current[message.noteId]) return current;
+          const next = { ...current };
+          delete next[message.noteId];
+          return next;
+        });
+        editor.removeNote(message.noteId);
+      }),
+      realtimeConnection.on<ConnectionCreatedEvent>(
+        realtimeEvents.connectionCreated,
+        (message) => {
+          if (message.boardId === id) mergeConnection(message);
+        },
+      ),
+      realtimeConnection.on<ConnectionDeletedEvent>(
+        realtimeEvents.connectionDeleted,
+        (message) => {
+          if (message.boardId === id)
+            setEdges((current) => current.filter((edge) => edge.id !== message.connectionId));
+        },
+      ),
+      realtimeConnection.on<BoardUpdatedEvent>(realtimeEvents.boardUpdated, (message) => {
+        if (message.boardId !== id) return;
+        setBoard((current) => current &&
+          Date.parse(current.updatedAt) > Date.parse(message.updatedAt)
+          ? current
+          : current && { ...current, title: message.title, updatedAt: message.updatedAt });
+      }),
+      realtimeConnection.on<BoardScopedEvent>(realtimeEvents.membersChanged, (message) => {
+        if (message.boardId !== id) return;
+        void Promise.all([boardApi.get(id), boardApi.members(id)]).then(([currentBoard, currentMembers]) => {
+          const downgraded = permissionRef.current === true && !currentBoard.canEdit;
+          permissionRef.current = currentBoard.canEdit;
+          setBoard(currentBoard);
+          setMembers(currentMembers);
+          boardLoaded(currentBoard);
+          if (downgraded) {
+            stopLocalEditingNow();
+            editor.stopEditing();
+            setVisuals({});
+            notify("Your permission changed to Viewer. Unsaved text is retained in this browser session.");
+          }
+        }).catch(() => undefined);
+      }),
+      realtimeConnection.on<ProfileChangedEvent>(realtimeEvents.profileChanged, (message) => {
+        if (message.boardId === id)
+          void boardApi.members(id).then(setMembers).catch(() => undefined);
+      }),
+      realtimeConnection.on<NoteGeometryPreviewEvent>(
+        realtimeEvents.noteGeometryPreview,
+        (message) => {
+          if (message.boardId === id) acceptRemotePreview(message);
+        },
+      ),
+      realtimeConnection.on<NoteGeometryPreviewEndedEvent>(
+        realtimeEvents.noteGeometryPreviewEnded,
+        (message) => {
+          if (message.boardId === id) endRemotePreview(message);
+        },
+      ),
+      realtimeConnection.on<NoteEditingStartedEvent>(
+        realtimeEvents.noteEditingStarted,
+        (message) => {
+          if (message.boardId === id) acceptRemoteEditing(message);
+        },
+      ),
+      realtimeConnection.on<NoteEditingStoppedEvent>(
+        realtimeEvents.noteEditingStopped,
+        (message) => {
+          if (message.boardId === id) endRemoteEditing(message);
+        },
+      ),
+      realtimeConnection.on<BoardCursorMovedEvent>(
+        realtimeEvents.boardCursorMoved,
+        (message) => {
+          if (message.boardId === id) acceptRemoteCursor(message);
+        },
+      ),
+      realtimeConnection.on<BoardCursorStoppedEvent>(
+        realtimeEvents.boardCursorStopped,
+        (message) => {
+          if (message.boardId === id) endRemoteCursor(message);
+        },
+      ),
+      realtimeConnection.on<BoardScopedEvent>(realtimeEvents.boardAccessRevoked, (message) => {
+        if (message.boardId !== id) return;
+        clearAllRemotePreviews();
+        clearAllRemoteEditing();
+        clearAllRemoteCursors();
+        stopLocalEditingNow();
+        stopLocalCursor();
+        editor.clearBoard();
+        setPresence(null);
+        notify("Your access to this board was removed.");
+        back();
+      }),
+    ];
+    return () => cleanups.forEach((cleanup) => cleanup());
+  }, [
+    acceptRemoteEditing,
+    acceptRemoteCursor,
+    acceptRemotePreview,
+    back,
+    clearAllRemoteEditing,
+    clearAllRemoteCursors,
+    clearAllRemotePreviews,
+    clearRemoteEditingForNote,
+    clearRemotePreview,
+    endRemoteEditing,
+    endRemoteCursor,
+    endRemotePreview,
+    editor,
+    id,
+    mergeAuthoritativeNote,
+    mergeConnection,
+    notify,
+    publishNotes,
+    stopLocalEditingNow,
+    stopLocalCursor,
+  ]);
   useEffect(() => () => {
+    for (const timer of remotePreviewTimers.current.values()) clearTimeout(timer);
+    remotePreviewTimers.current.clear();
+    remotePreviewsRef.current = {};
+    remotePreviewEnds.current.clear();
+    for (const timer of remoteEditingTimers.current.values()) clearTimeout(timer);
+    remoteEditingTimers.current.clear();
+    remoteEditingRef.current = {};
+    for (const timer of remoteCursorTimers.current.values()) clearTimeout(timer);
+    remoteCursorTimers.current.clear();
+    remoteCursorsRef.current = {};
+    remoteCursorEnds.current.clear();
+    stopLocalEditingNow();
+    stopLocalCursor();
     for (const [noteId, pending] of colorTimers.current) {
       clearTimeout(pending.timer);
       void commitVisual(noteId, { color: pending.color });
     }
     colorTimers.current.clear();
-  }, [commitVisual]);
+  }, [commitVisual, stopLocalCursor, stopLocalEditingNow]);
   async function create(kind: 0 | 1) {
     try {
       setConnecting(false);
@@ -1377,10 +1987,10 @@ function Workspace({
         content: "",
         positionX: 120 + (count % 2) * 300,
         positionY: 120 + Math.floor(count / 2) * 210,
-        color: kind === 1 ? "#443D29" : "#1D3841",
+        color: kind === 1 ? "#EEE2BF" : "#EEE8DB",
       });
-      publishNotes((previous) => [...previous, value]);
-      setSelected(value.id);
+      mergeAuthoritativeNote(value);
+      editor.select(value.id);
       setEditTitleId(value.id);
       notify(kind === 1 ? "Task list created" : "Note created");
     } catch (cause) {
@@ -1394,7 +2004,7 @@ function Workspace({
         title: title.trim(),
         parentNoteId: parentId,
       });
-      publishNotes((previous) => [...previous, value]);
+      mergeAuthoritativeNote(value);
       notify("Checklist item added");
     } catch (cause) {
       notify(errorMessage(cause));
@@ -1416,6 +2026,14 @@ function Workspace({
     try {
       await patchNote(noteId, { title });
       setEditTitleId(null);
+    } catch (cause) {
+      failed(noteId, cause);
+    }
+  }
+  async function editContent(noteId: string, content: string) {
+    try {
+      await patchNote(noteId, { content });
+      notify("Note body updated");
     } catch (cause) {
       failed(noteId, cause);
     }
@@ -1442,13 +2060,18 @@ function Workspace({
     return targetId !== sourceId ? targetId : null;
   }
   function connectStart(sourceId: string, event: Pointer<HTMLButtonElement>) {
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
+    const canvas = canvasRef.current;
+    const rect = canvas?.getBoundingClientRect();
+    if (!canvas || !rect) return;
     event.preventDefault();
+    const point = clientPointToBoard(
+      rect,
+      { left: canvas.scrollLeft, top: canvas.scrollTop },
+      { x: event.clientX, y: event.clientY },
+    );
     const value = {
       sourceId,
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top,
+      ...point,
       targetId: null,
     };
     draftRef.current = value;
@@ -1457,13 +2080,18 @@ function Workspace({
   }
   function connectMove(event: Pointer<HTMLButtonElement>) {
     const current = draftRef.current;
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!current || !rect) return;
+    const canvas = canvasRef.current;
+    const rect = canvas?.getBoundingClientRect();
+    if (!current || !canvas || !rect) return;
     if (!(event.buttons & 1)) return connectEnd(event);
+    const point = clientPointToBoard(
+      rect,
+      { left: canvas.scrollLeft, top: canvas.scrollTop },
+      { x: event.clientX, y: event.clientY },
+    );
     const value = {
       ...current,
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top,
+      ...point,
       targetId: targetAt(event.clientX, event.clientY, current.sourceId),
     };
     draftRef.current = value;
@@ -1474,19 +2102,27 @@ function Workspace({
     setConnectionDraft(null);
     setConnecting(false);
   }
+  async function createConnection(sourceId: string, targetId: string) {
+    if (sourceId === targetId || notesAreConnected(sourceId, targetId, edges)) {
+      notify("These notes are already connected.");
+      return;
+    }
+    try {
+      const edge = await connectionApi.create(id, sourceId, targetId, type);
+      mergeConnection(edge);
+      setConnectionTargetId("");
+      notify("Connection created");
+    } catch (cause) {
+      notify(errorMessage(cause));
+    }
+  }
   async function connectEnd(event: Pointer<HTMLButtonElement>) {
     const current = draftRef.current;
     connectCancel();
     if (!current) return;
     const targetId = targetAt(event.clientX, event.clientY, current.sourceId);
     if (!targetId) return;
-    try {
-      const edge = await connectionApi.create(id, current.sourceId, targetId, type);
-      setEdges((previous) => [...previous, edge]);
-      notify("Connection created");
-    } catch (cause) {
-      notify(errorMessage(cause));
-    }
+    await createConnection(current.sourceId, targetId);
   }
   async function removeEdge(edgeId: string) {
     try {
@@ -1502,15 +2138,22 @@ function Workspace({
     setMembers(await boardApi.members(id));
     notify("Member access updated");
   }
+  async function changePermission(member: MemberDto, canEdit: boolean) {
+    await boardApi.setMemberPermission(id, member.userId, canEdit);
+    setMembers(await boardApi.members(id));
+    notify(`${identityLabel(member)} is now a ${canEdit ? "Editor" : "Viewer"}.`);
+  }
   async function removeGuest(guestId: string) {
+    const member = members.find((candidate) => candidate.userId === guestId);
     await boardApi.removeGuest(id, guestId);
     setMembers(await boardApi.members(id));
-    notify("Member removed");
+    notify(member ? `${identityLabel(member)} no longer has access to this board.` : "Collaborator removed.");
   }
   async function latest() {
     if (!conflicted) return;
     try {
       const fresh = await noteApi.get(id, conflicted);
+      editor.reconcileAuthoritative(fresh);
       publishNotes((all) => all.map((note) => note.id === fresh.id ? fresh : note));
       blockedNotes.current.delete(conflicted);
       setVisuals((all) => {
@@ -1518,48 +2161,134 @@ function Workspace({
         delete next[conflicted];
         return next;
       });
-      setConflicted(null);
-      notify("Latest note loaded");
+      setConflictLatest(fresh);
     } catch (cause) {
       notify(errorMessage(cause));
     }
   }
+  const memberById = useMemo(
+    () => new Map(members.map((member) => [member.userId, member])),
+    [members],
+  );
+  const conflictDraft = useNoteDraft(conflicted ?? "");
+  const editorsForNote = (noteId: string): EditingViewer[] =>
+    editingUserIds(remoteEditing[noteId], currentUserId).map((userId) => {
+      const member = memberById.get(userId);
+      return {
+        userId,
+        label: member ? identityLabel(member) : "Someone",
+        initials: member
+          ? collaboratorInitials(identityLabel(member))
+          : userId.replaceAll("-", "").slice(0, 2).toUpperCase(),
+        identity: member,
+      };
+    });
   const top = notes.filter((note) => note.kind !== 2),
-    visualTop = top.map((note) => ({ ...note, ...visuals[note.id] })),
-    selectedNote = top.find((note) => note.id === selected),
+    visualTop = top.map((note) => {
+      const remote = remotePreviews[note.id];
+      const remoteGeometry: VisualPatch | undefined = remote?.operation === 0
+        ? { positionX: remote.x ?? note.positionX ?? 0, positionY: remote.y ?? note.positionY ?? 0 }
+        : remote?.operation === 1
+          ? { width: remote.width ?? note.width, height: remote.height ?? note.height }
+          : undefined;
+      const candidate = { ...note, ...remoteGeometry, ...visuals[note.id] };
+      const bounds = noteDimensionBounds(candidate, notes.filter((item) => item.parentNoteId === note.id), candidate.width);
+      return {
+        ...candidate,
+        width: clampDimension(candidate.width, bounds.minWidth, bounds.maxWidth),
+        height: clampDimension(candidate.height, bounds.minHeight, bounds.maxHeight),
+      };
+    }),
+    inspectorNote = top.find((note) => note.id === editorNavigation.inspectorNoteId),
     editable = board?.canEdit ?? false;
+  const inspectorConnections = useMemo(
+    () => inspectorNote ? connectedNoteIds(inspectorNote.id, edges) : new Set<string>(),
+    [edges, inspectorNote],
+  );
+  const eligibleConnectionTargets = inspectorNote
+    ? top.filter((candidate) =>
+        candidate.id !== inspectorNote.id && !inspectorConnections.has(candidate.id))
+    : [];
+  const activeConnectionTargetId = eligibleConnectionTargets.some(
+    (note) => note.id === connectionTargetId,
+  ) ? connectionTargetId : "";
+  useEffect(() => {
+    setConnectionTargetId("");
+  }, [editorNavigation.inspectorNoteId]);
+  useEffect(() => {
+    const noteId = editorNavigation.inspectorNoteId;
+    const canvas = canvasRef.current;
+    if (!noteId || !canvas) return;
+    let frame = 0;
+    const reveal = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const node = Array.from(canvas.querySelectorAll<HTMLElement>("[data-note-id]"))
+          .find((candidate) => candidate.dataset.noteId === noteId);
+        if (node) revealBoardNode(canvas, node);
+      });
+    };
+    reveal();
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(reveal);
+    observer?.observe(canvas);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer?.disconnect();
+    };
+  }, [editorNavigation.inspectorNoteId]);
   return (
     <div className="workspace">
+      <CollaborationAnnouncements
+        editing={remoteEditing}
+        members={members}
+        notes={notes}
+        currentUserId={currentUserId}
+        realtimeStatus={realtimeStatus}
+      />
       <header className="board-header">
         <div className="board-heading">
-          <button className="back-button" onClick={back}>
-            <ArrowLeft size={17} /> Boards
-          </button>
+          <Button variant="quiet" className="back-button" onClick={back}>
+            <ArrowLeft size={18} aria-hidden="true" /> Boards
+          </Button>
           <span className="divider" />
           <span className="board-symbol">
             <Sparkles size={14} />
           </span>
-          <strong>{board?.title ?? "Board"}</strong>
+          <h1>{titleOverride ?? board?.title ?? "Board"}</h1>
         </div>
         <div className="board-actions">
+          <RealtimeHealth status={realtimeStatus} />
+          <BoardPresence
+            snapshot={presence}
+            members={members}
+            available={realtimeStatus === "connected"}
+          />
           {board && (
             <span className="permission-label">
-              {board.role === 1 ? "Owner" : editable ? "Can edit" : "Read only"}
+              {board.role === 1 ? "Owner" : editable ? "Editor" : "Viewer"}
             </span>
           )}
-          <button
-            className="outline-button"
+          <Button
+            variant="secondary"
             disabled={!board}
-            onClick={() => setPanel(panel === "share" ? null : "share")}
+            onClick={() => {
+              const next = panel === "share" ? null : "share";
+              if (next) editor.closeInspector(false);
+              setPanel(next);
+            }}
           >
-            <Share2 size={15} /> Share
-          </button>
-          <button
-            className="outline-button"
-            onClick={() => setPanel(panel === "chat" ? null : "chat")}
+            <Share2 size={18} aria-hidden="true" /> Share
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              const next = panel === "chat" ? null : "chat";
+              if (next) editor.closeInspector(false);
+              setPanel(next);
+            }}
           >
-            <MessageSquare size={15} /> Chat
-          </button>
+            <MessageSquare size={18} aria-hidden="true" /> Chat
+          </Button>
         </div>
       </header>
       {loading ? (
@@ -1568,56 +2297,61 @@ function Workspace({
         <div className="workspace-state">
           <h2>Board unavailable</h2>
           <p>{failure}</p>
-          <button className="soft-button" onClick={() => void load()}>
+          <Button variant="secondary" onClick={() => void load()}>
             Retry
-          </button>
+          </Button>
         </div>
       ) : (
         <main className="board-main">
           <div className="canvas-tools">
             {editable && (
               <>
-                <button
-                  className="icon-button"
-                  title="New note"
-                  aria-label="New note"
+                <IconButton
+                  label="New note"
                   onClick={() => void create(0)}
                 >
-                  <StickyNote size={17} />
-                </button>
-                <button
-                  className="icon-button"
-                  title="New task list"
-                  aria-label="New task list"
+                  <StickyNote size={18} aria-hidden="true" />
+                </IconButton>
+                <IconButton
+                  label="New task list"
                   onClick={() => void create(1)}
                 >
-                  <ListChecks size={17} />
-                </button>
-                <button
-                  className={`icon-button ${connecting ? "active" : ""}`}
-                  title="Connect notes"
-                  aria-label="Connect notes"
+                  <ListChecks size={18} aria-hidden="true" />
+                </IconButton>
+                <IconButton
+                  label={connecting ? "Cancel connection mode" : "Connect notes"}
+                  className={connecting ? "active" : ""}
+                  aria-pressed={connecting}
                   onClick={() => {
                     if (connecting) connectCancel();
                     else setConnecting(true);
                   }}
                 >
-                  <Link2 size={17} />
-                </button>
+                  <Link2 size={18} aria-hidden="true" />
+                </IconButton>
               </>
             )}
             <span className="tool-rule" />
-            <button
-              className="icon-button"
-              title="Tasks"
-              aria-label="Tasks"
-              onClick={() => setPanel(panel === "tasks" ? null : "tasks")}
+            <IconButton
+              label="Tasks"
+              aria-pressed={panel === "tasks"}
+              onClick={() => {
+                const next = panel === "tasks" ? null : "tasks";
+                if (next) editor.closeInspector(false);
+                setPanel(next);
+              }}
             >
-              <ListChecks size={17} />
-            </button>
+              <ListChecks size={18} aria-hidden="true" />
+            </IconButton>
           </div>
-          <div className="canvas" ref={canvasRef}>
-            <CircuitBackground />
+          <div
+            className="canvas"
+            ref={canvasRef}
+            tabIndex={-1}
+            onPointerMove={moveLocalCursor}
+            onPointerLeave={stopLocalCursor}
+          >
+            <RemoteCursors store={cursorStore} members={members} />
             {connecting && (
               <div className="canvas-label">
                 Drag from a note’s right handle to another note{" "}
@@ -1639,15 +2373,10 @@ function Workspace({
               {edges.map((edge) => {
                 const a = visualTop.find((n) => n.id === edge.sourceNoteId),
                   b = visualTop.find((n) => n.id === edge.targetNoteId);
-                const startX = (a?.positionX ?? 0) + (a?.width ?? 0),
-                  startY = (a?.positionY ?? 0) + (a?.height ?? 0) / 2,
-                  endX = b?.positionX ?? 0,
-                  endY = (b?.positionY ?? 0) + (b?.height ?? 0) / 2,
-                  bend = Math.max(45, Math.abs(endX - startX) / 2);
                 return a && b ? (
                   <path
                     key={edge.id}
-                    d={`M ${startX} ${startY} C ${startX + bend} ${startY}, ${endX - bend} ${endY}, ${endX} ${endY}`}
+                    d={nearestConnectionPath(a, b)}
                     className={edge.type === 1 ? "prerequisite-edge" : "related-edge"}
                     markerEnd="url(#connection-arrow)"
                   />
@@ -1662,102 +2391,164 @@ function Workspace({
                 return <path className="draft-edge" d={`M ${startX} ${startY} C ${startX + bend} ${startY}, ${connectionDraft.x - bend} ${connectionDraft.y}, ${connectionDraft.x} ${connectionDraft.y}`} markerEnd="url(#connection-arrow)" />;
               })()}
             </svg>
-            {visualTop.map((note) => (
-              <NoteCard
-                key={note.id}
-                note={note}
-                items={notes.filter((item) => item.parentNoteId === note.id)}
-                selected={selected === note.id}
-                editable={editable}
-                select={() => setSelected(note.id)}
-                toggle={toggle}
-                addItem={(title) => void addItem(note.id, title)}
-                editTitle={(title) => void editTitle(note.id, title)}
-                editItem={(item, title) => void editItem(item, title)}
-                removeItem={(item) => void removeItem(item)}
-                autoEditTitle={editTitleId === note.id}
-                preview={preview}
-                cancelPreview={cancelPreview}
-                commitVisual={commitVisual}
-                connectStart={connectStart}
-                connectMove={connectMove}
-                connectEnd={(event) => void connectEnd(event)}
-                connectCancel={connectCancel}
-                connecting={connecting}
-                targetHighlighted={connectionDraft?.targetId === note.id}
-              />
-            ))}
+            {visualTop.map((note) => {
+              const remote = remotePreviews[note.id];
+              const remoteMember = remote ? memberById.get(remote.userId) : undefined;
+              const remoteLabel = remoteMember ? identityLabel(remoteMember) : "Someone";
+              return (
+                <NoteCard
+                  key={note.id}
+                  note={note}
+                  items={notes.filter((item) => item.parentNoteId === note.id)}
+                  selected={selected === note.id}
+                  editable={editable}
+                  select={() => editor.select(note.id)}
+                  toggle={toggle}
+                  addItem={(title) => void addItem(note.id, title)}
+                  editTitle={(title) => editTitle(note.id, title)}
+                  editContent={(content) => editContent(note.id, content)}
+                  editItem={(item, title) => editItem(item, title)}
+                  removeItem={(item) => void removeItem(item)}
+                  openProperties={(origin) => {
+                    setPanel(null);
+                    editor.openInspector(note.id, origin);
+                  }}
+                  autoEditTitle={editTitleId === note.id}
+                  preview={preview}
+                  cancelPreview={cancelPreview}
+                  commitVisual={commitVisual}
+                  broadcastGeometry={broadcastGeometry}
+                  endGeometry={endGeometry}
+                  connectStart={connectStart}
+                  connectMove={connectMove}
+                  connectEnd={(event) => void connectEnd(event)}
+                  connectCancel={connectCancel}
+                  connecting={connecting}
+                  targetHighlighted={connectionDraft?.targetId === note.id}
+                  remoteGeometry={remote ? {
+                    userId: remote.userId,
+                    label: remoteLabel,
+                    initials: collaboratorInitials(remoteLabel),
+                    operation: remote.operation,
+                    profileImageUrl: remoteMember?.profileImageUrl,
+                    username: remoteMember?.username,
+                  } : undefined}
+                  editors={editorsForNote(note.id)}
+                  editingChanged={editingChanged}
+                />
+              );
+            })}
             {!top.length && (
-              <div className="canvas-empty">
-                {editable
-                  ? "Create a note or task list to start."
-                  : "This board has no notes yet."}
+              <div className="canvas-empty" role="status">
+                <h2>{editable ? "Start with a note" : "No notes yet"}</h2>
+                <p>{editable
+                  ? "Capture an idea here, then add a task list when you're ready."
+                  : "This board is waiting for its first idea."}</p>
+                {editable && <Button onClick={() => void create(0)}><Plus size={18} aria-hidden="true" /> Add note</Button>}
               </div>
             )}
-            {selectedNote && (
-              <div className="editor-panel">
-                <button
-                  className="icon-button editor-close"
-                  onClick={() => setSelected(null)}
-                  aria-label="Close note editor"
-                >
-                  <X size={17} />
-                </button>
-                <Editor
-                  key={selectedNote.id}
-                  note={selectedNote}
-                  visualColor={visuals[selectedNote.id]?.color ?? selectedNote.color}
-                  visualWidth={visuals[selectedNote.id]?.width ?? selectedNote.width}
-                  visualHeight={visuals[selectedNote.id]?.height ?? selectedNote.height}
+          </div>
+          {inspectorNote && (
+            <InspectorFrame
+              title={`Properties for ${inspectorNote.title}`}
+              presentation={editorNavigation.presentation}
+              close={editor.closeInspector}
+            >
+                <PropertiesEditor
+                  key={inspectorNote.id}
+                  note={inspectorNote}
+                  items={notes.filter((item) => item.parentNoteId === inspectorNote.id)}
+                  visualColor={visuals[inspectorNote.id]?.color ?? inspectorNote.color}
+                  visualWidth={visualTop.find((note) => note.id === inspectorNote.id)?.width ?? inspectorNote.width}
+                  visualHeight={visualTop.find((note) => note.id === inspectorNote.id)?.height ?? inspectorNote.height}
                   editable={editable}
-                  patch={patchNote}
                   removeNote={deleteNote}
-                  deleted={() => setSelected(null)}
+                  deleted={() => {
+                    finishEditing(inspectorNote.id, true);
+                  }}
                   preview={preview}
                   cancelPreview={cancelPreview}
                   commitVisual={commitVisual}
                   changeColor={changeColor}
                   failed={failed}
                   notify={notify}
-                />
-                <div className="connection-list">
-                  <h3>Connections</h3>
-                  {edges
-                    .filter(
-                      (edge) =>
-                        edge.sourceNoteId === selected ||
-                        edge.targetNoteId === selected,
-                    )
-                    .map((edge) => (
-                      <div key={edge.id}>
-                        {edge.type === 1 ? "Prerequisite" : "Related"} ·{" "}
-                        {
-                          top.find(
-                            (n) =>
-                              n.id ===
-                              (edge.sourceNoteId === selected
-                                ? edge.targetNoteId
-                                : edge.sourceNoteId),
-                          )?.title
-                        }
-                        {editable && (
-                          <button onClick={() => void removeEdge(edge.id)}>
-                            Remove
-                          </button>
-                        )}
+                >
+                  <section className="connection-list inspector-section" aria-labelledby={`connections-${inspectorNote.id}`}>
+                    <h3 id={`connections-${inspectorNote.id}`}>Connections</h3>
+                    {editable && eligibleConnectionTargets.length > 0 && (
+                      <div className="connection-create">
+                        <label>
+                          Connect to
+                          <select
+                            value={activeConnectionTargetId}
+                            onChange={(event) => setConnectionTargetId(event.target.value)}
+                          >
+                            <option value="">Choose a note…</option>
+                            {eligibleConnectionTargets.map((candidate) => (
+                                <option key={candidate.id} value={candidate.id}>{candidate.title}</option>
+                              ))}
+                          </select>
+                        </label>
+                        <label>
+                          Relationship
+                          <select value={type} onChange={(event) => setType(Number(event.target.value) as 0 | 1)}>
+                            <option value={0}>Related</option>
+                            <option value={1}>Prerequisite</option>
+                          </select>
+                        </label>
+                        <Button
+                          variant="secondary"
+                          disabled={!activeConnectionTargetId}
+                          onClick={() => void createConnection(inspectorNote.id, activeConnectionTargetId)}
+                        >
+                          <Link2 size={17} aria-hidden="true" /> Add connection
+                        </Button>
                       </div>
-                    ))}
-                </div>
-              </div>
-            )}
-          </div>
+                    )}
+                    {editable && top.length > 1 && eligibleConnectionTargets.length === 0 && (
+                      <p className="connection-complete">Every other note is already connected.</p>
+                    )}
+                    {edges.every((edge) =>
+                      edge.sourceNoteId !== inspectorNote.id && edge.targetNoteId !== inspectorNote.id) && (
+                      <p className="connection-complete">No connections yet.</p>
+                    )}
+                    {edges
+                      .filter(
+                        (edge) =>
+                          edge.sourceNoteId === inspectorNote.id ||
+                          edge.targetNoteId === inspectorNote.id,
+                      )
+                      .map((edge) => (
+                        <div key={edge.id}>
+                          {edge.type === 1 ? "Prerequisite" : "Related"} ·{" "}
+                          {
+                            top.find(
+                              (n) =>
+                                n.id ===
+                                (edge.sourceNoteId === inspectorNote.id
+                                  ? edge.targetNoteId
+                                  : edge.sourceNoteId),
+                            )?.title
+                          }
+                          {editable && (
+                            <Button variant="quiet" size="compact" onClick={() => void removeEdge(edge.id)}>
+                              Remove
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                  </section>
+                </PropertiesEditor>
+            </InspectorFrame>
+          )}
           {panel === "tasks" && (
             <TasksPanel
               notes={notes}
               editable={editable}
               toggle={toggle}
-              edit={(item, title) => void editItem(item, title)}
+              edit={(item, title) => editItem(item, title)}
               remove={(item) => void removeItem(item)}
+              editingChanged={editingChanged}
               close={() => setPanel(null)}
             />
           )}
@@ -1765,7 +2556,10 @@ function Workspace({
             <SharePanel
               board={board}
               members={members}
+              presence={presence}
+              presenceAvailable={realtimeStatus === "connected"}
               setGuest={setGuest}
+              changePermission={changePermission}
               removeGuest={removeGuest}
               close={() => setPanel(null)}
             />
@@ -1774,40 +2568,47 @@ function Workspace({
             <aside className="side-panel">
               <div className="panel-head">
                 <h2>Board chat</h2>
-                <button
-                  className="icon-button"
-                  onClick={() => setPanel(null)}
-                  aria-label="Close chat"
-                >
-                  <X size={17} />
-                </button>
+                <IconButton label="Close chat" onClick={() => setPanel(null)}>
+                  <X size={18} aria-hidden="true" />
+                </IconButton>
               </div>
               <div className="panel-empty">
-                Board chat is unavailable until persistent chat support is added
-                to the API.
+                Chat is not available on this board yet. Use notes to share ideas with your board members.
               </div>
             </aside>
           )}
         </main>
       )}
       {conflicted && (
-        <div
-          className="conflict-dialog"
-          role="alertdialog"
-          aria-label="Note conflict"
-        >
-          <h2>This note was modified by another board member.</h2>
-          <p>Load the latest version before editing again.</p>
-          <button className="primary-button" onClick={() => void latest()}>
-            View latest
-          </button>
-          <button
-            className="soft-button"
-            onClick={() => void load().then(() => setConflicted(null))}
-          >
-            Reload board
-          </button>
-        </div>
+        <Dialog title="This note changed while you were editing" urgent onClose={() => setConflicted(null)}>
+          <p>
+            {conflictDraft
+              ? "Your draft is still safe in this browser session. Review the latest saved version before deciding what to keep."
+              : "A newer saved version is available. Review it before trying your change again."}
+          </p>
+          {conflictLatest && (
+            <div className="wk-conflict-comparison">
+              {conflictDraft && (
+                <section>
+                  <h3>Your unsaved draft</h3>
+                  <strong>{conflictDraft.title}</strong>
+                  {conflictDraft.content && <p>{conflictDraft.content}</p>}
+                </section>
+              )}
+              <section>
+                <h3>Latest saved version</h3>
+                <strong>{conflictLatest.title}</strong>
+                {conflictLatest.content && <p>{conflictLatest.content}</p>}
+              </section>
+            </div>
+          )}
+          <div className="wk-dialog-actions">
+            <Button onClick={() => void latest()}>
+              {conflictLatest ? "Refresh latest saved version" : "Review latest saved version"}
+            </Button>
+            <Button variant="quiet" onClick={() => setConflicted(null)}>Keep editing my draft</Button>
+          </div>
+        </Dialog>
       )}
     </div>
   );
@@ -1819,7 +2620,7 @@ export default function App() {
     [starting, setStarting] = useState(true),
     [startupError, setStartupError] = useState(""),
     [notice, setNotice] = useState(""),
-    [boards, setBoards] = useState<BoardDto[]>([]),
+    [boards, setBoards] = useState<BoardListItemDto[]>([]),
     [loading, setLoading] = useState(false),
     [failure, setFailure] = useState("");
   const started = useRef(false);
@@ -1859,24 +2660,39 @@ export default function App() {
       }
     })();
   }, []);
-  const loadBoards = useCallback(async () => {
-    setLoading(true);
+  const loadBoards = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     setFailure("");
     try {
       setBoards(await boardApi.list());
     } catch (cause) {
       setFailure(errorMessage(cause));
+      throw cause;
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   }, []);
+  const onProfileUpdated = useCallback((profile: ProfileDto) => {
+    setSession((current) => {
+      if (!current) return current;
+      const user = {
+        id: profile.userId,
+        email: profile.email,
+        username: profile.username,
+        displayName: profile.displayName,
+        profileImageUrl: profile.profileImageUrl,
+        profileImageVersion: profile.profileImageVersion,
+      };
+      reconcileSessionUser(user);
+      return { ...current, user };
+    });
+  }, []);
   const boardLoaded = useCallback(
-    (board: BoardDto) =>
-      setBoards((previous) =>
-        previous.some((item) => item.id === board.id)
-          ? previous
-          : [board, ...previous],
-      ),
+    (board: BoardDetailDto) =>
+      setBoards((previous) => previous.map((item) =>
+        item.id === board.id
+          ? { ...item, title: board.title, updatedAt: board.updatedAt }
+          : item)),
     [],
   );
   useEffect(() => {
@@ -1896,7 +2712,7 @@ export default function App() {
     }
   }, [starting, session, path]);
   useEffect(() => {
-    if (session) void loadBoards();
+    if (session) void loadBoards().catch(() => undefined);
   }, [session, loadBoards]);
   async function signOut(all: boolean) {
     try {
@@ -1910,8 +2726,65 @@ export default function App() {
     }
   }
   const boardId = boardFromPath(path);
+  const accountSection = accountSectionForPath(path);
+  useEffect(() => {
+    if (path === "/account") {
+      window.history.replaceState(null, "", "/account/profile");
+      setPath("/account/profile");
+    }
+  }, [path]);
+  const leaveBoard = useCallback(() => navigate("/boards"), [navigate]);
+  async function renameBoard(boardId: string, title: string) {
+    const updated = await boardApi.rename(boardId, title);
+    setBoards((current) => current.map((item) => item.id === boardId
+      ? { ...item, title: updated.title, updatedAt: updated.updatedAt }
+      : item));
+    setNotice("Board renamed");
+  }
+  async function deleteBoard(deletedId: string) {
+    await boardApi.remove(deletedId);
+    setBoards((current) => current.filter((item) => item.id !== deletedId));
+    if (boardId === deletedId) navigate("/boards");
+    setNotice("Board deleted");
+  }
+  useEffect(() => {
+    if (!session) return;
+    void realtimeConnection.start();
+    return () => void realtimeConnection.stop();
+  }, [session?.user.id]);
+  useEffect(() => {
+    if (!session) return;
+    return realtimeConnection.onReconnected(() => loadBoards(false));
+  }, [loadBoards, session?.user.id]);
+  useEffect(() => {
+    if (!session) return;
+    return realtimeConnection.on<UserProfileChangedEvent>(realtimeEvents.userProfileChanged, (message) => {
+      if (message.userId !== session.user.id) return;
+      void profileApi.get().then(onProfileUpdated).catch(() => undefined);
+    });
+  }, [onProfileUpdated, session?.user.id]);
+  useEffect(() => {
+    if (!session) return;
+    const removeChanged = realtimeConnection.on<BoardSummaryChangedEvent>(
+      realtimeEvents.boardSummaryChanged,
+      (message) => setBoards((current) => mergeBoardSummary(current, message)),
+    );
+    const removeDeleted = realtimeConnection.on<BoardScopedEvent>(
+      realtimeEvents.boardSummaryRemoved,
+      (message) => setBoards((current) =>
+        current.filter((board) => board.id !== message.boardId)),
+    );
+    return () => {
+      removeChanged();
+      removeDeleted();
+    };
+  }, [session?.user.id]);
+  useEffect(() => {
+    if (!session || !boardId) return;
+    return realtimeConnection.subscribeBoard(boardId);
+  }, [boardId, session?.user.id]);
   if (starting)
-    return <div className="startup-state">Restoring your session…</div>;
+    return <div className="wk-startup"><Wordmark /><p role="status">Restoring your session…</p></div>;
   if (!session)
     return (
       <AuthScreen
@@ -1933,50 +2806,62 @@ export default function App() {
   ) {
     window.history.replaceState(null, "", "/boards");
     queueMicrotask(() => setPath("/boards"));
-    return <div className="startup-state">Opening boards…</div>;
+    return <div className="wk-startup"><Wordmark /><p role="status">Opening boards…</p></div>;
   }
   return (
-    <div className="app-shell">
-      <SidebarNav
-        user={session.user}
-        boards={boards}
-        active={boardId}
-        navigate={navigate}
-        signOut={() => void signOut(false)}
-        signOutEverywhere={() => void signOut(true)}
-        notify={setNotice}
-      />
-      {boardId ? (
+    <AppShell
+      user={session.user}
+      boards={boards}
+      activeBoardId={boardId}
+      navigate={navigate}
+      onRenameBoard={renameBoard}
+      onDeleteBoard={deleteBoard}
+      signOut={() => void signOut(false)}
+      signOutEverywhere={() => void signOut(true)}
+      notify={setNotice}
+    >
+      {path === "/library" ? <SoonPage area="Library" /> : path === "/library/pictures" ? <SoonPage area="Pictures" /> : path === "/journal" ? <SoonPage area="Journal" /> : path === "/tasks" ? <SoonPage area="Tasks" /> : accountSection ? (
+        <AccountPanel
+          user={session.user}
+          section={accountSection}
+          navigate={navigate}
+          signOut={() => void signOut(false)}
+          signOutEverywhere={() => void signOut(true)}
+          notify={setNotice}
+          onProfileUpdated={onProfileUpdated}
+        />
+      ) : boardId ? (
         <Workspace
           key={boardId}
           id={boardId}
-          back={() => navigate("/boards")}
+          titleOverride={boards.find((item) => item.id === boardId)?.title}
+          currentUserId={session.user.id}
+          profileIdentityVersion={`${session.user.username}:${session.user.displayName ?? ""}:${session.user.profileImageVersion ?? ""}`}
+          back={leaveBoard}
           boardLoaded={boardLoaded}
           notify={setNotice}
         />
       ) : (
-        <Dashboard
+        <BoardLanding
           boards={boards}
+          displayName={session.user.displayName}
           loading={loading}
           failure={failure}
-          retry={() => void loadBoards()}
+          retry={() => void loadBoards().catch(() => undefined)}
           navigate={navigate}
+          onRenameBoard={renameBoard}
+          onDeleteBoard={deleteBoard}
           create={async (title) => {
             const board = await boardApi.create(title);
-            setBoards((previous) => [board, ...previous]);
+            setBoards(await boardApi.list());
             setNotice("Board created");
             navigate(`/boards/${board.id}`);
           }}
         />
       )}
       {notice && (
-        <div className="notice" role="status">
-          {notice}
-          <button onClick={() => setNotice("")} aria-label="Dismiss">
-            <X size={14} />
-          </button>
-        </div>
+        <Notice message={notice} onDismiss={() => setNotice("")} />
       )}
-    </div>
+    </AppShell>
   );
 }

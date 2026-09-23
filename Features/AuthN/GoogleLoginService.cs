@@ -71,6 +71,8 @@ public sealed class GoogleLoginService(
                 // This is only set after the mapped Google verified-email claim was required.
                 EmailConfirmed = true
             };
+            user.Username = UsernamePolicy.FromEmail(email, user.Id);
+            user.NormalizedUsername = UsernamePolicy.Normalize(user.Username);
 
             // Omitting a password intentionally creates a passwordless Identity account.
             var createResult = await userManager.CreateAsync(user);

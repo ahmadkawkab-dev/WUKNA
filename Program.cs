@@ -3,13 +3,17 @@ using Lapis.Features.Auth;
 using Lapis.Features.Board;
 using Lapis.Features.Notes;
 using Lapis.Features.NoteConnection;
+using Lapis.Features.Realtime;
 using Lapis.Features.Users;
+using Lapis.Features.Profile;
 using Lapis.Shared.Data.AppDbContext;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Text;
@@ -20,6 +24,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddControllersWithViews();
 builder.Services.AddHealthChecks();
+builder.Services.Configure<FormOptions>(options =>
+    options.MultipartBodyLengthLimit = 5 * 1024 * 1024 + 64 * 1024);
 
 // Keep runtime mapping aligned with the design-time factory before creating migrations.
 builder.Services.AddDbContext<LapisDbContext>(options =>
@@ -38,6 +44,22 @@ ValidateGoogleOAuthSettings(googleSettings, builder.Environment);
 builder.Services.AddSingleton(jwtOptions);
 builder.Services.AddSingleton(googleSettings);
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<BoardActivity>();
+builder.Services.AddScoped<BoardSummaryReader>();
+builder.Services.AddSingleton<IProfileImageStore, FileProfileImageStore>();
+builder.Services.AddHostedService<ProfileImageCleanupService>();
+builder.Services.AddScoped<BoardAccess>();
+builder.Services.AddScoped<BoardRealtimeDispatcher>();
+builder.Services.AddSingleton<IBoardConnectionRegistry, BoardConnectionRegistry>();
+builder.Services.AddSingleton<INoteGeometryPreviewRegistry, NoteGeometryPreviewRegistry>();
+builder.Services.AddSingleton<INoteEditingRegistry, NoteEditingRegistry>();
+builder.Services.AddSingleton<IBoardCursorRegistry, BoardCursorRegistry>();
+builder.Services.AddSingleton<IBoardRealtimePublisher, BoardRealtimePublisher>();
+builder.Services.AddHostedService<NoteEditingCleanupService>();
+builder.Services.AddHostedService<BoardCursorCleanupService>();
+builder.Services.AddSingleton<IUserIdProvider, SubjectUserIdProvider>();
+builder.Services.AddSignalR(options =>
+    options.EnableDetailedErrors = builder.Environment.IsDevelopment());
 builder.Services.AddSingleton<JwtTokenGenerator>();
 builder.Services.AddScoped<SessionIssuer>();
 builder.Services.AddScoped<AuthService>();
@@ -73,6 +95,20 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
+        };
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                // Browser WebSocket/EventSource APIs cannot attach the Authorization header.
+                // Accept SignalR's query-token fallback on the one hub path only.
+                if (context.HttpContext.Request.Path.StartsWithSegments(BoardHub.Path))
+                {
+                    var accessToken = context.Request.Query["access_token"].ToString();
+                    if (!string.IsNullOrWhiteSpace(accessToken)) context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
         };
     })
     .AddCookie(IdentityConstants.ExternalScheme, options =>
@@ -148,6 +184,7 @@ app.UseSwaggerUI();
 
 
 app.UseStaticFiles();
+app.UseStaticFiles(ProfileImageStaticFiles.Options(app.Services.GetRequiredService<IProfileImageStore>()));
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -157,6 +194,9 @@ app.MapAuthEndpoints();
 app.MapBoardEndpoints();
 app.MapNoteEndpoints();
 app.MapNoteConnectionEndpoints();
+app.MapProfileEndpoints();
+app.MapHub<BoardHub>(BoardHub.Path, options =>
+    options.CloseOnAuthenticationExpiration = true).RequireAuthorization();
 
 app.MapControllerRoute(name: "default", pattern: "{controller=Health}/{action=Index}/{id?}");
 
@@ -201,3 +241,5 @@ static void ValidateGoogleOAuthSettings(
             "or an HTTP loopback origin in Development.");
     }
 }
+
+public partial class Program;

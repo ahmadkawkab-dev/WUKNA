@@ -46,7 +46,13 @@ public sealed class SessionIssuer(
         var response = new AuthResponseDto(
             accessToken,
             accessExpiresAt,
-            new UserSummaryDto(user.Id, user.Email ?? string.Empty));
+            new UserSummaryDto(
+                user.Id,
+                user.Email ?? string.Empty,
+                user.Username,
+                user.DisplayName,
+                ProfileImageUrls.For(user.ProfileImageKey, user.ProfileImageVersion),
+                user.ProfileImageVersion));
 
         return new IssuedSession(response, rawRefreshToken, refreshExpiresAt);
     }

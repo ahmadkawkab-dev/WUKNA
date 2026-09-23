@@ -36,6 +36,8 @@ public sealed class AuthService(
         }
 
         var user = new User { UserName = email, Email = email };
+        user.Username = UsernamePolicy.FromEmail(email, user.Id);
+        user.NormalizedUsername = UsernamePolicy.Normalize(user.Username);
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         IdentityResult result;

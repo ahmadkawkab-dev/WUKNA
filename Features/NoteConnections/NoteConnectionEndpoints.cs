@@ -3,6 +3,7 @@ namespace Lapis.Features.NoteConnection;
 using System.IdentityModel.Tokens.Jwt;
 using Lapis.Features.Board;
 using Lapis.Features.Notes;
+using Lapis.Features.Realtime;
 using Lapis.Shared.Data.AppDbContext;
 using Microsoft.EntityFrameworkCore;
 
@@ -40,7 +41,9 @@ public static class NoteConnectionEndpoints
         });
 
         group.MapPost("/", async (Guid boardId, CreateNoteConnectionRequest request,
-            HttpContext context, LapisDbContext db, CancellationToken cancellationToken) =>
+            HttpContext context, LapisDbContext db, BoardActivity activity,
+            BoardRealtimeDispatcher realtime,
+            CancellationToken cancellationToken) =>
         {
             if (!TryGetUserId(context, out var userId)) return Results.Unauthorized();
             var canEdit = await GetAccessAsync(db, boardId, userId, cancellationToken);
@@ -72,13 +75,18 @@ public static class NoteConnectionEndpoints
                 Color = "#888888"
             };
             db.NoteConnections.Add(connection);
+            activity.MarkUpdated(db, boardId);
             await db.SaveChangesAsync(cancellationToken);
+            var response = NoteConnectionDto.From(connection);
+            await realtime.ConnectionCreatedAsync(response);
             return Results.Created($"/api/boards/{boardId}/connections/{connection.Id}",
-                NoteConnectionDto.From(connection));
+                response);
         });
 
         group.MapDelete("/{connectionId:guid}", async (Guid boardId, Guid connectionId,
-            HttpContext context, LapisDbContext db, CancellationToken cancellationToken) =>
+            HttpContext context, LapisDbContext db, BoardActivity activity,
+            BoardRealtimeDispatcher realtime,
+            CancellationToken cancellationToken) =>
         {
             if (!TryGetUserId(context, out var userId)) return Results.Unauthorized();
             var canEdit = await GetAccessAsync(db, boardId, userId, cancellationToken);
@@ -89,7 +97,10 @@ public static class NoteConnectionEndpoints
                 c.BoardId == boardId && c.Id == connectionId, cancellationToken);
             if (connection is null) return Results.NotFound();
             db.NoteConnections.Remove(connection);
+            activity.MarkUpdated(db, boardId);
             await db.SaveChangesAsync(cancellationToken);
+            await realtime.ConnectionDeletedAsync(new ConnectionDeletedEvent(
+                boardId, connectionId));
             return Results.NoContent();
         });
 
