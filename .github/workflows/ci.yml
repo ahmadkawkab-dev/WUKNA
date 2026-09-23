@@ -9,16 +9,11 @@ permissions:
 
 jobs:
   backend:
-    strategy:
-      matrix:
-        os:
-          - ubuntu-latest
-          - windows-latest
-          - macos-latest
-
-    runs-on: ${{ matrix.os }}
-
+    runs-on: ubuntu-latest
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
         with:
