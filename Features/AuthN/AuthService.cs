@@ -1,8 +1,8 @@
-namespace Lapis.Features.Auth;
+namespace Wukna.Features.Auth;
 
-using Lapis.Features.Auth.DTOs;
-using Lapis.Features.Users;
-using Lapis.Shared.Data.AppDbContext;
+using Wukna.Features.Auth.DTOs;
+using Wukna.Features.Users;
+using Wukna.Shared.Data.AppDbContext;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -13,7 +13,7 @@ public sealed record RegistrationResult(
     string[] ValidationErrors);
 
 public sealed class AuthService(
-    LapisDbContext db,
+    WuknaDbContext db,
     UserManager<User> userManager,
     SignInManager<User> signInManager,
     SessionIssuer sessionIssuer,
@@ -36,6 +36,8 @@ public sealed class AuthService(
         }
 
         var user = new User { UserName = email, Email = email };
+        user.Username = UsernamePolicy.FromEmail(email, user.Id);
+        user.NormalizedUsername = UsernamePolicy.Normalize(user.Username);
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         IdentityResult result;

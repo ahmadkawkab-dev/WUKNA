@@ -1,0 +1,292 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Camera, Link2, LogOut, RefreshCw, Trash2, Unlink } from "lucide-react";
+import {
+  getAccountStatus,
+  startGoogleLink,
+  unlinkGoogle,
+  type AccountStatus,
+  type AuthSession,
+} from "../../auth";
+import { errorMessage, profileApi, type ProfileDto } from "../../api";
+import { Button } from "../../components/ui/Button";
+import { Field } from "../../components/ui/Field";
+import { Avatar, identityLabel } from "../../components/ui/Avatar";
+import { ThemeControl } from "../../components/ui/ThemeControl";
+
+export function AccountPanel({
+  user,
+  section,
+  navigate,
+  signOut,
+  signOutEverywhere,
+  notify,
+  onProfileUpdated,
+}: {
+  user: AuthSession["user"];
+  section: "profile" | "preferences";
+  navigate: (path: string) => void;
+  signOut: () => void;
+  signOutEverywhere: () => void;
+  notify: (message: string) => void;
+  onProfileUpdated: (profile: ProfileDto) => void;
+}) {
+  const [status, setStatus] = useState<AccountStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [failure, setFailure] = useState("");
+  const [profile, setProfile] = useState<ProfileDto | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [username, setUsername] = useState(user.username ?? "");
+  const [displayName, setDisplayName] = useState(user.displayName ?? "");
+  const [profileBusy, setProfileBusy] = useState(false);
+  const [profileError, setProfileError] = useState("");
+  const [preview, setPreview] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setFailure("");
+    try {
+      setStatus(await getAccountStatus());
+    } catch (cause) {
+      setStatus(null);
+      setFailure(errorMessage(cause));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const loadProfile = useCallback(async () => {
+    setProfileLoading(true);
+    setProfileError("");
+    try {
+      const value = await profileApi.get();
+      const normalized: ProfileDto = {
+        userId: typeof value?.userId === "string" ? value.userId : user.id,
+        email: typeof value?.email === "string" ? value.email : user.email ?? "",
+        username: typeof value?.username === "string" ? value.username : user.username ?? "",
+        displayName: typeof value?.displayName === "string" ? value.displayName : null,
+        profileImageUrl: typeof value?.profileImageUrl === "string" ? value.profileImageUrl : null,
+        profileImageVersion: typeof value?.profileImageVersion === "string" ? value.profileImageVersion : null,
+      };
+      setProfile(normalized);
+      setUsername(normalized.username);
+      setDisplayName(normalized.displayName ?? "");
+      onProfileUpdated(normalized);
+    } catch (cause) {
+      setProfileError(errorMessage(cause));
+    } finally {
+      setProfileLoading(false);
+    }
+  }, [onProfileUpdated, user.displayName, user.username]);
+
+  useEffect(() => {
+    void loadProfile();
+  }, [loadProfile]);
+
+  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
+
+  async function saveProfile(event: React.FormEvent) {
+    event.preventDefault();
+    setProfileBusy(true);
+    setProfileError("");
+    try {
+      const response = await profileApi.update(username, displayName);
+      const updated: ProfileDto = {
+        userId: typeof response?.userId === "string" ? response.userId : user.id,
+        email: typeof response?.email === "string" ? response.email : user.email ?? "",
+        username: typeof response?.username === "string" ? response.username : username,
+        displayName: typeof response?.displayName === "string" ? response.displayName : null,
+        profileImageUrl: typeof response?.profileImageUrl === "string" ? response.profileImageUrl : profile?.profileImageUrl ?? null,
+        profileImageVersion: typeof response?.profileImageVersion === "string" ? response.profileImageVersion : profile?.profileImageVersion ?? null,
+      };
+      setProfile(updated);
+      setUsername(updated.username);
+      setDisplayName(updated.displayName ?? "");
+      onProfileUpdated(updated);
+      notify("Profile updated");
+    } catch (cause) { setProfileError(errorMessage(cause)); }
+    finally { setProfileBusy(false); }
+  }
+
+  async function selectImage(file?: File) {
+    if (!file) return;
+    setProfileError("");
+    if (!file.type.startsWith("image/")) { setProfileError("Choose an image file."); return; }
+    if (file.size > 5 * 1024 * 1024) { setProfileError("Profile images must be 5 MB or smaller."); return; }
+    const objectUrl = URL.createObjectURL(file);
+    setPreview(objectUrl);
+    setProfileBusy(true);
+    try {
+      const response = await profileApi.uploadAvatar(file);
+      const updated = profile ?? await profileApi.get();
+      const canonical = { ...updated, profileImageUrl: response.profileImageUrl, profileImageVersion: response.profileImageVersion };
+      setProfile(canonical);
+      onProfileUpdated(canonical);
+      notify("Profile photo updated");
+    } catch (cause) { setProfileError(errorMessage(cause)); }
+    finally { setProfileBusy(false); setPreview((current) => { if (current) URL.revokeObjectURL(current); return null; }); }
+  }
+
+  async function removePhoto() {
+    setProfileBusy(true);
+    setProfileError("");
+    try {
+      const response = await profileApi.removeAvatar();
+      const updated = { ...(profile ?? await profileApi.get()), ...response };
+      setProfile(updated);
+      onProfileUpdated(updated);
+      notify("Profile photo removed");
+    } catch (cause) { setProfileError(errorMessage(cause)); }
+    finally { setProfileBusy(false); }
+  }
+
+  async function linkGoogle() {
+    try {
+      await startGoogleLink();
+    } catch (cause) {
+      notify(errorMessage(cause));
+    }
+  }
+
+  async function removeGoogle() {
+    try {
+      await unlinkGoogle();
+      await load();
+      notify("Google login removed");
+    } catch (cause) {
+      notify(errorMessage(cause));
+    }
+  }
+
+  const externalLogins = Array.isArray(status?.externalLogins) ? status.externalLogins : [];
+  const googleConnected = externalLogins.includes("Google");
+  const canRemoveGoogle =
+    status?.hasPassword ||
+    externalLogins.some((provider) => provider !== "Google");
+
+  return (
+    <div className="wk-account-page">
+      <header className="wk-account-page-heading">
+        <div>
+          <h1>Account</h1>
+          <p>Manage your profile and preferences.</p>
+        </div>
+        <Button variant="quiet" onClick={() => navigate("/boards")}>Back to boards</Button>
+      </header>
+      <nav className="wk-account-tabs" aria-label="Account sections">
+        <button type="button" aria-current={section === "profile" ? "page" : undefined}
+          onClick={() => navigate("/account/profile")}>Edit profile</button>
+        <button type="button" aria-current={section === "preferences" ? "page" : undefined}
+          onClick={() => navigate("/account/preferences")}>Preferences</button>
+      </nav>
+      {profileError && <div className="wk-account-error" role="alert">
+        <p>Profile details could not be loaded or saved. {profileError}</p>
+        <Button variant="secondary" onClick={() => void loadProfile()}><RefreshCw size={16} aria-hidden="true" /> Retry</Button>
+      </div>}
+      <div className="wk-account-panel">
+      {section === "profile" ? <>
+      <div className="wk-account-identity">
+        <Avatar identity={{ ...user, displayName: profile?.displayName, username: profile?.username, profileImageUrl: preview ?? profile?.profileImageUrl }} size="large" />
+        <div>
+          <span className="wk-account-label">Signed in as</span>
+          <strong>{identityLabel({ displayName: profile?.displayName ?? user.displayName, username: profile?.username ?? username, email: profile?.email ?? user.email })}</strong>
+        </div>
+      </div>
+
+      {profileLoading ? <div className="wk-profile-loading" role="status" aria-label="Loading profile">
+        <span /><span /><span />
+      </div> : <form className="wk-profile-form" onSubmit={(event) => void saveProfile(event)}>
+        <section className="wk-account-section" aria-labelledby="wk-profile-heading">
+          <h3 id="wk-profile-heading">Profile</h3>
+          <div className="wk-profile-photo-row">
+            <Avatar identity={{ ...user, displayName, username, profileImageUrl: preview ?? profile?.profileImageUrl }} size="large" />
+            <div className="wk-profile-photo-actions">
+              <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" hidden
+                onChange={(event) => { void selectImage(event.currentTarget.files?.[0]); event.currentTarget.value = ""; }} />
+              <Button variant="secondary" type="button" disabled={profileBusy} onClick={() => fileInput.current?.click()}>
+                <Camera size={16} aria-hidden="true" /> Change photo
+              </Button>
+              {profile?.profileImageUrl && <Button variant="quiet" type="button" disabled={profileBusy} onClick={() => void removePhoto()}>
+                <Trash2 size={16} aria-hidden="true" /> Remove photo
+              </Button>}
+            </div>
+          </div>
+          <Field label="Display name" name="displayName" autoComplete="name" maxLength={80}
+            value={displayName} onChange={(event) => setDisplayName(event.target.value)} disabled={profileBusy} />
+          <Field label="Username" name="username" autoComplete="nickname" minLength={3} maxLength={30} required
+            hint="3–30 letters, numbers, periods, underscores, or hyphens."
+            value={username} onChange={(event) => setUsername(event.target.value)} disabled={profileBusy} />
+          <Field label="Email" name="email" type="email" value={profile?.email ?? user.email} disabled readOnly />
+          <div className="wk-dialog-actions"><Button type="submit" disabled={profileBusy || !username.trim()}>
+            {profileBusy ? "Saving…" : "Save changes"}
+          </Button></div>
+        </section>
+      </form>
+      }</> : <>
+      <section className="wk-account-section" aria-labelledby="wk-appearance-heading">
+        <h3 id="wk-appearance-heading">Appearance</h3>
+        <ThemeControl />
+      </section>
+
+      <section className="wk-account-section" aria-labelledby="wk-sign-in-heading">
+        <div className="wk-account-section-heading">
+          <div>
+            <h3 id="wk-sign-in-heading">Sign-in methods</h3>
+            <p>Choose how you can return to Wukna.</p>
+          </div>
+          {loading && <span className="wk-account-status" role="status">Checking…</span>}
+        </div>
+
+        {failure ? (
+          <div className="wk-account-error" role="alert">
+            <p>{failure}</p>
+            <Button variant="secondary" onClick={() => void load()}>
+              <RefreshCw size={16} aria-hidden="true" /> Retry
+            </Button>
+          </div>
+        ) : status ? (
+          <div className="wk-provider-row">
+            <div>
+              <strong>Google</strong>
+              <span>{googleConnected ? "Connected" : "Not connected"}</span>
+            </div>
+            {googleConnected ? (
+              canRemoveGoogle ? (
+                <Button variant="quiet" onClick={() => void removeGoogle()}>
+                  <Unlink size={16} aria-hidden="true" /> Remove
+                </Button>
+              ) : (
+                <span className="wk-account-status">Only sign-in method</span>
+              )
+            ) : (
+              <Button variant="secondary" onClick={() => void linkGoogle()}>
+                <Link2 size={16} aria-hidden="true" /> Connect
+              </Button>
+            )}
+          </div>
+        ) : null}
+      </section>
+
+      <section className="wk-account-section wk-account-session" aria-labelledby="wk-session-heading">
+        <div>
+          <h3 id="wk-session-heading">Session</h3>
+          <p>Sign out here, or close every active Wukna session.</p>
+        </div>
+        <div className="wk-account-actions">
+          <Button variant="secondary" onClick={signOut}>
+            <LogOut size={16} aria-hidden="true" /> Sign out
+          </Button>
+          <Button variant="danger" onClick={signOutEverywhere}>
+            Sign out everywhere
+          </Button>
+        </div>
+      </section>
+      </>}
+      </div>
+    </div>
+  );
+}

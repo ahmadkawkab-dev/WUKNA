@@ -1,10 +1,10 @@
-namespace Lapis.Features.Auth;
+namespace Wukna.Features.Auth;
 
 using System.Security.Cryptography;
 using System.Text;
-using Lapis.Features.Auth.DTOs;
-using Lapis.Features.Users;
-using Lapis.Shared.Data.AppDbContext;
+using Wukna.Features.Auth.DTOs;
+using Wukna.Features.Users;
+using Wukna.Shared.Data.AppDbContext;
 using Microsoft.AspNetCore.WebUtilities;
 
 public sealed record IssuedSession(
@@ -17,14 +17,19 @@ public sealed record IssuedSession(
 /// Local-password and external-provider flows must both use this component.
 /// </summary>
 public sealed class SessionIssuer(
-    LapisDbContext db,
+    WuknaDbContext db,
     JwtTokenGenerator tokenGenerator,
     JwtOptions options,
     TimeProvider timeProvider,
     IHostEnvironment environment)
 {
-    internal const string RefreshCookieName = "lapis.refresh";
+    internal const string RefreshCookieName = "wukna.refresh";
+    // Accepted for one-time migration of active browser sessions from the former cookie name.
+    internal const string LegacyRefreshCookieName = "lapis.refresh";
     private const string RefreshCookiePath = "/api/auth";
+
+    internal static string? ReadRefreshCookie(HttpRequest request) =>
+        request.Cookies[RefreshCookieName] ?? request.Cookies[LegacyRefreshCookieName];
 
     public async Task<IssuedSession> IssueAsync(User user, CancellationToken cancellationToken)
     {
@@ -46,7 +51,13 @@ public sealed class SessionIssuer(
         var response = new AuthResponseDto(
             accessToken,
             accessExpiresAt,
-            new UserSummaryDto(user.Id, user.Email ?? string.Empty));
+            new UserSummaryDto(
+                user.Id,
+                user.Email ?? string.Empty,
+                user.Username,
+                user.DisplayName,
+                ProfileImageUrls.For(user.ProfileImageKey, user.ProfileImageVersion),
+                user.ProfileImageVersion));
 
         return new IssuedSession(response, rawRefreshToken, refreshExpiresAt);
     }
@@ -59,10 +70,14 @@ public sealed class SessionIssuer(
         var cookieOptions = CreateRefreshCookieOptions();
         cookieOptions.Expires = session.RefreshExpiresAt;
         response.Cookies.Append(RefreshCookieName, session.RefreshToken, cookieOptions);
+        response.Cookies.Delete(LegacyRefreshCookieName, CreateRefreshCookieOptions());
     }
 
-    public void DeleteRefreshCookie(HttpResponse response) =>
+    public void DeleteRefreshCookie(HttpResponse response)
+    {
         response.Cookies.Delete(RefreshCookieName, CreateRefreshCookieOptions());
+        response.Cookies.Delete(LegacyRefreshCookieName, CreateRefreshCookieOptions());
+    }
 
     private CookieOptions CreateRefreshCookieOptions() => new()
     {

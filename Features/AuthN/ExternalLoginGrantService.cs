@@ -1,11 +1,11 @@
-namespace Lapis.Features.Auth;
+namespace Wukna.Features.Auth;
 
 using System.Security.Cryptography;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
-using Lapis.Features.Auth.DTOs;
-using Lapis.Features.Users;
-using Lapis.Shared.Data.AppDbContext;
+using Wukna.Features.Auth.DTOs;
+using Wukna.Features.Users;
+using Wukna.Shared.Data.AppDbContext;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,11 +18,12 @@ public sealed record ExternalExchangeResult(
 /// Session issuance occurs only after the browser exchanges this credential successfully.
 /// </summary>
 public sealed class ExternalLoginGrantService(
-    LapisDbContext db,
+    WuknaDbContext db,
     SessionIssuer sessionIssuer,
     TimeProvider timeProvider,
     IHostEnvironment environment)
 {
+    // Keep the short-lived browser binding name for OAuth callbacks already in flight.
     public const string BrowserBindingCookieName = "lapis.external.binding";
     public const string ExchangePath = "/api/auth/external/exchange";
     public const string CodeExpired = "external_login_code_expired";

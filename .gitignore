@@ -17,10 +17,10 @@ packages/
 *.snupkg
 
 # Local configuration and secrets
+.lic
 .env
 .env.*
 !.env.example
-/DEVELOPMENT_NOTES.md
 appsettings.Local.json
 appsettings.*.local.json
 secrets.json
@@ -70,3 +70,9 @@ Desktop.ini
 *.tmp
 *.bak
 *~
+
+# Ignore Markdown documentation
+*.md
+
+# Keep the root README tracked
+!/README.md

@@ -4,7 +4,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Lapis.Migrations
+namespace Wukna.Migrations
 {
     /// <inheritdoc />
     public partial class InitialCreate : Migration

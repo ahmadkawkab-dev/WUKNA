@@ -1,8 +1,8 @@
-namespace Lapis.Features.Auth;
+namespace Wukna.Features.Auth;
 
 using System.IdentityModel.Tokens.Jwt;
-using Lapis.Features.Auth.DTOs;
-using Lapis.Features.Users;
+using Wukna.Features.Auth.DTOs;
+using Wukna.Features.Users;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Identity;
@@ -95,7 +95,7 @@ public static class AuthEndpoints
             }
             finally
             {
-                // The external principal has served its only purpose. It is not a LAPIS session.
+                // The external principal has served its only purpose. It is not a WUKNA session.
                 await context.SignOutAsync(IdentityConstants.ExternalScheme);
             }
         });
@@ -273,7 +273,7 @@ public static class AuthEndpoints
                 return Results.BadRequest(new { error = "Invalid CSRF token." });
 
             var response = await service.RefreshAsync(
-                context.Request.Cookies[SessionIssuer.RefreshCookieName],
+                SessionIssuer.ReadRefreshCookie(context.Request),
                 context.Response,
                 cancellationToken);
             if (response is null)
@@ -296,7 +296,7 @@ public static class AuthEndpoints
                 return Results.BadRequest(new { error = "Invalid CSRF token." });
 
             await service.LogoutAsync(
-                context.Request.Cookies[SessionIssuer.RefreshCookieName], cancellationToken);
+                SessionIssuer.ReadRefreshCookie(context.Request), cancellationToken);
             sessionIssuer.DeleteRefreshCookie(context.Response);
             return Results.NoContent();
         });

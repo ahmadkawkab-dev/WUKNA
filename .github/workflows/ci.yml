@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore tests/Wukna.IntegrationTests/Wukna.IntegrationTests.csproj
+
+      - name: Build
+        run: dotnet build tests/Wukna.IntegrationTests/Wukna.IntegrationTests.csproj --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test tests/Wukna.IntegrationTests/Wukna.IntegrationTests.csproj --configuration Release --no-build

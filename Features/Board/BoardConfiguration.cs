@@ -1,4 +1,4 @@
-namespace Lapis.Features.Board;
+namespace Wukna.Features.Board;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -13,6 +13,7 @@ public class BoardConfiguration : IEntityTypeConfiguration<Board>
               .IsRequired()
               .HasMaxLength(200);
         entity.Property(board => board.CreatedAt).HasDefaultValueSql("now()");
+        entity.Property(board => board.UpdatedAt).HasDefaultValueSql("now()");
     }
 }
 

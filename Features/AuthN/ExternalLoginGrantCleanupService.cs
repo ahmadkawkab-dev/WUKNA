@@ -1,6 +1,6 @@
-namespace Lapis.Features.Auth;
+namespace Wukna.Features.Auth;
 
-using Lapis.Shared.Data.AppDbContext;
+using Wukna.Shared.Data.AppDbContext;
 using Microsoft.EntityFrameworkCore;
 
 /// <summary>
@@ -42,7 +42,7 @@ public sealed class ExternalLoginGrantCleanupService(
     private async Task DeleteOneBatchAsync(CancellationToken cancellationToken)
     {
         await using var scope = scopeFactory.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<LapisDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<WuknaDbContext>();
         var now = timeProvider.GetUtcNow();
 
         var expiredIds = await db.ExternalLoginGrants.AsNoTracking()
