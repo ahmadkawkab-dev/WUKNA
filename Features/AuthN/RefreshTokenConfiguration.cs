@@ -1,4 +1,4 @@
-namespace Lapis.Features.Auth;
+namespace Wukna.Features.Auth;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;

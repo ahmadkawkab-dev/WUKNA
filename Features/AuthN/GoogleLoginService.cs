@@ -1,8 +1,8 @@
-namespace Lapis.Features.Auth;
+namespace Wukna.Features.Auth;
 
 using System.Security.Claims;
-using Lapis.Features.Users;
-using Lapis.Shared.Data.AppDbContext;
+using Wukna.Features.Users;
+using Wukna.Shared.Data.AppDbContext;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -13,11 +13,11 @@ public sealed record GoogleLoginResolution(User? User, string? ErrorCode)
 }
 
 /// <summary>
-/// Converts Google's validated external principal into one LAPIS user identity.
+/// Converts Google's validated external principal into one WUKNA user identity.
 /// Application-session issuance remains the responsibility of <see cref="SessionIssuer"/>.
 /// </summary>
 public sealed class GoogleLoginService(
-    LapisDbContext db,
+    WuknaDbContext db,
     UserManager<User> userManager,
     ILogger<GoogleLoginService> logger)
 {
@@ -55,7 +55,7 @@ public sealed class GoogleLoginService(
         }
 
         // Matching a verified email is insufficient proof that the person owns the existing
-        // LAPIS account. They must sign in locally and explicitly link Google instead.
+        // WUKNA account. They must sign in locally and explicitly link Google instead.
         if (await userManager.FindByEmailAsync(email) is not null)
         {
             return LinkRequired();

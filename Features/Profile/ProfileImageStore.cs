@@ -1,4 +1,4 @@
-namespace Lapis.Features.Profile;
+namespace Wukna.Features.Profile;
 
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
@@ -105,7 +105,7 @@ public sealed class ProfileImageCleanupService(
     private async Task CleanupAsync(CancellationToken cancellationToken)
     {
         using var scope = scopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<Lapis.Shared.Data.AppDbContext.LapisDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<Wukna.Shared.Data.AppDbContext.WuknaDbContext>();
         var cutoff = timeProvider.GetUtcNow().AddHours(-24);
         await store.CleanupTemporaryFilesAsync(cutoff, cancellationToken);
         var candidates = store.List().Where(file => file.ModifiedAt < cutoff).ToArray();

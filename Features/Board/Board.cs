@@ -1,4 +1,4 @@
-namespace Lapis.Features.Board;
+namespace Wukna.Features.Board;
 
 using Features.Notes;
 

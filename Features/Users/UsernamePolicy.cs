@@ -1,4 +1,4 @@
-namespace Lapis.Features.Users;
+namespace Wukna.Features.Users;
 
 using System.Text.RegularExpressions;
 

@@ -1,4 +1,4 @@
-namespace Lapis.Features.Realtime;
+namespace Wukna.Features.Realtime;
 
 using System.Collections.Concurrent;
 

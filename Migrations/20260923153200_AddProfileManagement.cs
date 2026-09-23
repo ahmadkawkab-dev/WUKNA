@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace Lapis.Migrations
+namespace Wukna.Migrations
 {
     /// <inheritdoc />
     public partial class AddProfileManagement : Migration

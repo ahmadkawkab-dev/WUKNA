@@ -1,7 +1,7 @@
-namespace Lapis.Features.Realtime;
+namespace Wukna.Features.Realtime;
 
 using System.IdentityModel.Tokens.Jwt;
-using Lapis.Features.Board;
+using Wukna.Features.Board;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 

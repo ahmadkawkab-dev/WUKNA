@@ -32,11 +32,11 @@ Shared/Data/                 EF Core context and design-time factory
 Migrations/                  EF Core migrations
 frontend/src/                React application
 frontend/tests/              Frontend tests
-tests/Lapis.IntegrationTests/ Backend integration tests
+tests/Wukna.IntegrationTests/ Backend integration tests
 frontend/nginx.conf          Static frontend server configuration
 ```
 
-The product is named Wukna; some source identifiers still use `Lapis`.
+The application, .NET projects, namespaces, frontend package, and local PostgreSQL database use the Wukna name.
 
 ## Prerequisites
 
@@ -64,7 +64,7 @@ dotnet tool restore
 Set a PostgreSQL connection string in your shell. Keep this variable set when applying migrations and running the API; EF's design-time factory reads environment variables, but does not load User Secrets.
 
 ```sh
-export ConnectionStrings__Postgres='Host=localhost;Port=5432;Database=<database>;Username=<user>;Password=<password>'
+export ConnectionStrings__Postgres='Host=localhost;Port=5432;Database=wukna;Username=<user>;Password=<password>'
 ```
 
 Set the required JWT signing key and Google OAuth credentials with .NET User Secrets. The signing key must be at least 32 bytes. `appsettings.json` supplies the development JWT issuer, audience, lifetimes, and frontend origin; override them through configuration if your setup differs.
@@ -79,7 +79,17 @@ Register `http://localhost:5173/api/auth/external/google/provider-callback` as a
 
 ### 3. Start PostgreSQL and apply migrations
 
-Start your local PostgreSQL service and create the database named in the connection string. Then run:
+For a new local installation, create the `wukna` database. If you already have a database named `lapis`, preserve it by stopping the API and renaming it in place. Connect to the maintenance database (usually `postgres`), check that the old database has no other active sessions, then run the `ALTER DATABASE` command only after they are gone:
+
+```sql
+SELECT pid, application_name, client_addr
+FROM pg_stat_activity
+WHERE datname = 'lapis' AND pid <> pg_backend_pid();
+
+ALTER DATABASE lapis RENAME TO wukna;
+```
+
+Do not drop or recreate the database. The migration history and user data stay in the renamed database. Then run:
 
 ```sh
 dotnet ef database update
@@ -109,18 +119,18 @@ Open `http://localhost:5173`. Vite proxies `/api` and `/hubs` to the API at `htt
 
 ASP.NET Core loads `appsettings.json`, environment variables, and User Secrets in Development. The required settings are `ConnectionStrings:Postgres`, `Jwt:SigningKey`, `Authentication:Google:ClientId`, and `Authentication:Google:ClientSecret`. `Authentication:Google:FrontendBaseUrl` defaults to the local Vite origin. `ProfileImages:Directory` can override the profile image storage path.
 
-The included `.env.example` is a template; neither the API nor Vite automatically loads it as an application configuration file. The Vite proxy target is currently fixed in `frontend/vite.config.ts`. For deployment, the frontend, `/api`, and `/hubs` need a shared origin with API and WebSocket proxying; the included Nginx file serves static assets only.
+The included `.env.example` is a template; neither the API nor Vite automatically loads it as an application configuration file. The Vite proxy target is currently fixed in `frontend/vite.config.ts`. The existing User Secrets ID is retained so local signing and Google credentials continue to load; if a saved `ConnectionStrings:Postgres` secret overrides `appsettings.json`, change its database component to `wukna`. A few short-lived authentication cookie and Data Protection names retain their old cryptographic identifiers for rollout compatibility. For deployment, the frontend, `/api`, and `/hubs` need a shared origin with API and WebSocket proxying; the included Nginx file serves static assets only.
 
 ## Database migrations
 
-Migrations live in `Migrations/`. After changing the EF Core model, create a migration from the repository root with `dotnet ef migrations add <MigrationName>`, review it, and apply it with `dotnet ef database update`. The design-time factory uses the same PostgreSQL `snake_case` naming convention as the API. Set `ConnectionStrings__Postgres` for both commands.
+Migrations live in `Migrations/`. The product rename did not reset or add to migration history. Historical generated migration target models intentionally retain their original `Lapis.Features.*` CLR entity strings; the current `WuknaDbContextModelSnapshot` uses the renamed CLR entities, and the database schema/table names are unchanged. After changing the EF Core model, create a migration from the repository root with `dotnet ef migrations add <MigrationName>`, review it, and apply it with `dotnet ef database update`. The design-time factory uses the same PostgreSQL `snake_case` naming convention as the API. Set `ConnectionStrings__Postgres` for both commands.
 
 ## Testing and builds
 
 The backend tests start an isolated PostgreSQL 17 container and apply migrations there. They require a working Docker daemon.
 
 ```sh
-dotnet test --project tests/Lapis.IntegrationTests/Lapis.IntegrationTests.csproj
+dotnet test --project tests/Wukna.IntegrationTests/Wukna.IntegrationTests.csproj
 ```
 
 The frontend has Node.js tests, a TypeScript check, and a production build:

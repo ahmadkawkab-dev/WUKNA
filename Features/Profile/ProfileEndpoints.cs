@@ -1,9 +1,9 @@
-namespace Lapis.Features.Profile;
+namespace Wukna.Features.Profile;
 
 using System.IdentityModel.Tokens.Jwt;
-using Lapis.Features.Users;
-using Lapis.Features.Realtime;
-using Lapis.Shared.Data.AppDbContext;
+using Wukna.Features.Users;
+using Wukna.Features.Realtime;
+using Wukna.Shared.Data.AppDbContext;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using SixLabors.ImageSharp;
@@ -22,7 +22,7 @@ public static class ProfileEndpoints
             context.HttpContext.Response.Headers.CacheControl = "no-store";
             return await next(context);
         });
-        group.MapGet("", async (HttpContext context, LapisDbContext db, CancellationToken ct) =>
+        group.MapGet("", async (HttpContext context, WuknaDbContext db, CancellationToken ct) =>
         {
             if (!TryGetUserId(context, out var id)) return Results.Unauthorized();
             var user = await db.Users.AsNoTracking().SingleOrDefaultAsync(user => user.Id == id, ct);
@@ -30,7 +30,7 @@ public static class ProfileEndpoints
         });
 
         group.MapPatch("", async (
-            UpdateProfileRequest request, HttpContext context, LapisDbContext db,
+            UpdateProfileRequest request, HttpContext context, WuknaDbContext db,
             BoardRealtimeDispatcher realtime, CancellationToken ct) =>
         {
             if (!TryGetUserId(context, out var id)) return Results.Unauthorized();
@@ -71,7 +71,7 @@ public static class ProfileEndpoints
         group.MapPut("/avatar", async (
             HttpContext context,
             IProfileImageStore store,
-            LapisDbContext db,
+            WuknaDbContext db,
             BoardRealtimeDispatcher realtime,
             ILoggerFactory loggerFactory,
             CancellationToken ct) =>
@@ -168,7 +168,7 @@ public static class ProfileEndpoints
         }).DisableAntiforgery();
 
         group.MapDelete("/avatar", async (
-            HttpContext context, LapisDbContext db, IProfileImageStore store, ILoggerFactory loggerFactory,
+            HttpContext context, WuknaDbContext db, IProfileImageStore store, ILoggerFactory loggerFactory,
             BoardRealtimeDispatcher realtime, CancellationToken ct) =>
         {
             if (!TryGetUserId(context, out var id)) return Results.Unauthorized();

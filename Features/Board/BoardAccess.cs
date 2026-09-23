@@ -1,11 +1,11 @@
-namespace Lapis.Features.Board;
+namespace Wukna.Features.Board;
 
-using Lapis.Features.Notes;
-using Lapis.Shared.Data.AppDbContext;
+using Wukna.Features.Notes;
+using Wukna.Shared.Data.AppDbContext;
 using Microsoft.EntityFrameworkCore;
 
 /// <summary>Canonical persisted board-membership checks shared by realtime entry points.</summary>
-public sealed class BoardAccess(LapisDbContext db)
+public sealed class BoardAccess(WuknaDbContext db)
 {
     public Task<bool> CanAccessAsync(
         Guid userId,

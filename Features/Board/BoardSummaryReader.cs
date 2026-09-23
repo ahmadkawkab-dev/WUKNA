@@ -1,11 +1,11 @@
-namespace Lapis.Features.Board;
+namespace Wukna.Features.Board;
 
-using Lapis.Features.NoteConnection;
-using Lapis.Features.Notes;
-using Lapis.Shared.Data.AppDbContext;
+using Wukna.Features.NoteConnection;
+using Wukna.Features.Notes;
+using Wukna.Shared.Data.AppDbContext;
 using Microsoft.EntityFrameworkCore;
 
-public sealed class BoardSummaryReader(LapisDbContext db)
+public sealed class BoardSummaryReader(WuknaDbContext db)
 {
     public const int PreviewNodeLimit = 16;
     public const int PreviewConnectionLimit = 16;

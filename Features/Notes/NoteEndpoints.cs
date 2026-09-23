@@ -1,11 +1,11 @@
-namespace Lapis.Features.Notes;
+namespace Wukna.Features.Notes;
 
 using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text.RegularExpressions;
-using Lapis.Features.Board;
-using Lapis.Features.Realtime;
-using Lapis.Shared.Data.AppDbContext;
+using Wukna.Features.Board;
+using Wukna.Features.Realtime;
+using Wukna.Shared.Data.AppDbContext;
 using Microsoft.EntityFrameworkCore;
 
 public sealed record CreateNoteRequest(
@@ -63,7 +63,7 @@ public static class NoteEndpoints
     {
         var group = endpoints.MapGroup("/api/boards/{boardId:guid}/notes").RequireAuthorization();
 
-        group.MapGet("/", async (Guid boardId, HttpContext context, LapisDbContext db,
+        group.MapGet("/", async (Guid boardId, HttpContext context, WuknaDbContext db,
             CancellationToken cancellationToken) =>
         {
             if (!TryGetUserId(context, out var userId)) return Results.Unauthorized();
@@ -78,7 +78,7 @@ public static class NoteEndpoints
         });
 
         group.MapGet("/{noteId:guid}", async (Guid boardId, Guid noteId,
-            HttpContext context, LapisDbContext db, CancellationToken cancellationToken) =>
+            HttpContext context, WuknaDbContext db, CancellationToken cancellationToken) =>
         {
             if (!TryGetUserId(context, out var userId)) return Results.Unauthorized();
             if (await GetAccessAsync(db, boardId, userId, cancellationToken) is null)
@@ -93,7 +93,7 @@ public static class NoteEndpoints
         });
 
         group.MapPost("/", async (Guid boardId, CreateNoteRequest request,
-            HttpContext context, LapisDbContext db, BoardActivity activity,
+            HttpContext context, WuknaDbContext db, BoardActivity activity,
             BoardRealtimeDispatcher realtime,
             CancellationToken cancellationToken) =>
         {
@@ -155,7 +155,7 @@ public static class NoteEndpoints
         });
 
         group.MapPatch("/{noteId:guid}", async (Guid boardId, Guid noteId,
-            PatchNoteRequest request, HttpContext context, LapisDbContext db,
+            PatchNoteRequest request, HttpContext context, WuknaDbContext db,
             BoardActivity activity,
             BoardRealtimeDispatcher realtime,
             CancellationToken cancellationToken) =>
@@ -216,7 +216,7 @@ public static class NoteEndpoints
         });
 
         group.MapDelete("/{noteId:guid}", async (Guid boardId, Guid noteId,
-            HttpContext context, LapisDbContext db, BoardActivity activity,
+            HttpContext context, WuknaDbContext db, BoardActivity activity,
             BoardRealtimeDispatcher realtime,
             CancellationToken cancellationToken) =>
         {
@@ -258,7 +258,7 @@ public static class NoteEndpoints
     private static bool TryGetUserId(HttpContext context, out Guid userId) =>
         Guid.TryParse(context.User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value, out userId);
 
-    private static Task<BoardAccess?> GetAccessAsync(LapisDbContext db, Guid boardId,
+    private static Task<BoardAccess?> GetAccessAsync(WuknaDbContext db, Guid boardId,
         Guid userId, CancellationToken cancellationToken) =>
         db.BoardMemberships.AsNoTracking()
             .Where(membership => membership.BoardId == boardId && membership.UserId == userId)

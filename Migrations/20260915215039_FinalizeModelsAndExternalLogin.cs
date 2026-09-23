@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Lapis.Migrations
+namespace Wukna.Migrations
 {
     /// <inheritdoc />
     public partial class FinalizeModelsAndExternalLogin : Migration

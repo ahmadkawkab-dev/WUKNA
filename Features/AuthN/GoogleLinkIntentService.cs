@@ -1,17 +1,18 @@
-namespace Lapis.Features.Auth;
+namespace Wukna.Features.Auth;
 
 using System.Security.Cryptography;
 using System.Text.Json;
-using Lapis.Features.Users;
+using Wukna.Features.Users;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 
 /// <summary>
-/// Carries the already-authenticated LAPIS user through browser navigation to Google.
+/// Carries the already-authenticated WUKNA user through browser navigation to Google.
 /// The browser cannot choose a user ID because the payload is protected on the server.
 /// </summary>
 public sealed class GoogleLinkIntentService
 {
+    // Retain these names briefly so a Google account-link flow already in progress survives rollout.
     public const string CookieName = "lapis.google.link_intent";
     private const string CookiePath = "/api/auth/external/google";
     private const string Purpose = "link-google-login";
@@ -35,6 +36,7 @@ public sealed class GoogleLinkIntentService
         IHostEnvironment environment)
     {
         _protector = dataProtectionProvider.CreateProtector(
+            // Existing short-lived payloads were protected with this purpose string.
             "Lapis.Features.Auth.GoogleLinkIntent", "v1");
         _userManager = userManager;
         _timeProvider = timeProvider;

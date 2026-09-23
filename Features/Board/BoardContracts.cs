@@ -1,6 +1,6 @@
-namespace Lapis.Features.Board;
+namespace Wukna.Features.Board;
 
-using Lapis.Features.NoteConnection;
+using Wukna.Features.NoteConnection;
 
 public sealed record BoardDetailDto(
     Guid Id,

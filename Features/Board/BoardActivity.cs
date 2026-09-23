@@ -1,6 +1,6 @@
-namespace Lapis.Features.Board;
+namespace Wukna.Features.Board;
 
-using Lapis.Shared.Data.AppDbContext;
+using Wukna.Shared.Data.AppDbContext;
 
 /// <summary>Marks meaningful board mutations inside the caller's current save boundary.</summary>
 public sealed class BoardActivity(TimeProvider timeProvider)
@@ -12,7 +12,7 @@ public sealed class BoardActivity(TimeProvider timeProvider)
         board.UpdatedAt = now;
     }
 
-    public void MarkUpdated(LapisDbContext db, Guid boardId)
+    public void MarkUpdated(WuknaDbContext db, Guid boardId)
     {
         var board = db.Boards.Local.FirstOrDefault(candidate => candidate.Id == boardId);
         if (board is null)

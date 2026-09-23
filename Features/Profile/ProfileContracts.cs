@@ -1,4 +1,4 @@
-namespace Lapis.Features.Profile;
+namespace Wukna.Features.Profile;
 
 public sealed record UpdateProfileRequest(string? Username, string? DisplayName);
 public sealed record ProfileDto(

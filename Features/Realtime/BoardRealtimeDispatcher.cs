@@ -1,9 +1,9 @@
-namespace Lapis.Features.Realtime;
+namespace Wukna.Features.Realtime;
 
-using Lapis.Features.Board;
-using Lapis.Features.NoteConnection;
-using Lapis.Features.Notes;
-using Lapis.Shared.Data.AppDbContext;
+using Wukna.Features.Board;
+using Wukna.Features.NoteConnection;
+using Wukna.Features.Notes;
+using Wukna.Shared.Data.AppDbContext;
 using Microsoft.EntityFrameworkCore;
 
 public sealed record BoardUpdatedEvent(
@@ -28,7 +28,7 @@ public sealed record BoardSummaryRemovedEvent(Guid BoardId);
 public sealed class BoardRealtimeDispatcher(
     IBoardRealtimePublisher publisher,
     BoardSummaryReader summaries,
-    LapisDbContext db,
+    WuknaDbContext db,
     ILogger<BoardRealtimeDispatcher> logger)
 {
     public Task BoardCreatedAsync(Guid boardId) => PublishSummariesAsync(boardId);

@@ -1,4 +1,4 @@
-namespace Lapis.Features.Users;
+namespace Wukna.Features.Users;
 
 using Features.Board;
 using Microsoft.AspNetCore.Identity;

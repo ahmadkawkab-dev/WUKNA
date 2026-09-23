@@ -1,17 +1,17 @@
 using Microsoft.EntityFrameworkCore;
-using Lapis.Features.Users;
-using Lapis.Features.Board;
-using Lapis.Features.Notes;
-using Lapis.Features.NoteConnection;
-using Lapis.Features.Auth;
+using Wukna.Features.Users;
+using Wukna.Features.Board;
+using Wukna.Features.Notes;
+using Wukna.Features.NoteConnection;
+using Wukna.Features.Auth;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
-namespace Lapis.Shared.Data.AppDbContext;
+namespace Wukna.Shared.Data.AppDbContext;
 
-public class LapisDbContext : IdentityUserContext<User, Guid>
+public class WuknaDbContext : IdentityUserContext<User, Guid>
 {
-    public LapisDbContext(DbContextOptions<LapisDbContext> options) : base(options)
+    public WuknaDbContext(DbContextOptions<WuknaDbContext> options) : base(options)
     {
         
     }
@@ -29,7 +29,7 @@ protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
 
-        builder.ApplyConfigurationsFromAssembly(typeof(LapisDbContext).Assembly);
+        builder.ApplyConfigurationsFromAssembly(typeof(WuknaDbContext).Assembly);
 
         // Identity assigns PascalCase table names explicitly, so the global naming
         // convention cannot rename these four tables by itself.

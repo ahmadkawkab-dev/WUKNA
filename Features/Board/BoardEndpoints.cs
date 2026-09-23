@@ -1,10 +1,10 @@
-namespace Lapis.Features.Board;
+namespace Wukna.Features.Board;
 
 using System.IdentityModel.Tokens.Jwt;
-using Lapis.Features.Realtime;
-using Lapis.Features.Notes;
-using Lapis.Features.Users;
-using Lapis.Shared.Data.AppDbContext;
+using Wukna.Features.Realtime;
+using Wukna.Features.Notes;
+using Wukna.Features.Users;
+using Wukna.Shared.Data.AppDbContext;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -32,7 +32,7 @@ public static class BoardEndpoints
         group.MapGet("/{boardId:guid}", async (
             Guid boardId,
             HttpContext context,
-            LapisDbContext db,
+            WuknaDbContext db,
             CancellationToken cancellationToken) =>
         {
             if (!TryGetUserId(context, out var userId)) return Results.Unauthorized();
@@ -53,7 +53,7 @@ public static class BoardEndpoints
         group.MapPost("/", async (
             CreateBoardRequest request,
             HttpContext context,
-            LapisDbContext db,
+            WuknaDbContext db,
             BoardActivity activity,
             BoardRealtimeDispatcher realtime,
             CancellationToken cancellationToken) =>
@@ -84,7 +84,7 @@ public static class BoardEndpoints
             Guid boardId,
             RenameBoardRequest request,
             HttpContext context,
-            LapisDbContext db,
+            WuknaDbContext db,
             BoardActivity activity,
             BoardRealtimeDispatcher realtime,
             CancellationToken cancellationToken) =>
@@ -116,7 +116,7 @@ public static class BoardEndpoints
         });
 
         group.MapDelete("/{boardId:guid}", async (
-            Guid boardId, HttpContext context, LapisDbContext db,
+            Guid boardId, HttpContext context, WuknaDbContext db,
             BoardRealtimeDispatcher realtime, CancellationToken cancellationToken) =>
         {
             if (!TryGetUserId(context, out var userId)) return Results.Unauthorized();
@@ -144,7 +144,7 @@ public static class BoardEndpoints
         });
 
         group.MapGet("/{boardId:guid}/members", async (
-            Guid boardId, HttpContext context, LapisDbContext db,
+            Guid boardId, HttpContext context, WuknaDbContext db,
             CancellationToken cancellationToken) =>
         {
             if (!TryGetUserId(context, out var userId)) return Results.Unauthorized();
@@ -155,7 +155,7 @@ public static class BoardEndpoints
                 .Where(m => m.BoardId == boardId)
                 .OrderByDescending(m => m.Role).ThenBy(m => m.User.Email)
                 .Select(m => new BoardMemberDto(m.UserId, m.User.Email ?? "", m.User.Username,
-                    m.User.DisplayName, Lapis.Features.Users.ProfileImageUrls.For(m.User.ProfileImageKey, m.User.ProfileImageVersion),
+                    m.User.DisplayName, Wukna.Features.Users.ProfileImageUrls.For(m.User.ProfileImageKey, m.User.ProfileImageVersion),
                     m.User.ProfileImageVersion, m.Role,
                     m.Role == BoardRole.Owner || m.CanEdit))
                 .ToListAsync(cancellationToken);
@@ -166,7 +166,7 @@ public static class BoardEndpoints
             Guid boardId,
             SetGuestAccessRequest request,
             HttpContext context,
-            LapisDbContext db,
+            WuknaDbContext db,
             UserManager<User> userManager,
             BoardActivity activity,
             BoardRealtimeDispatcher realtime,
@@ -219,7 +219,7 @@ public static class BoardEndpoints
 
         group.MapPatch("/{boardId:guid}/members/{memberId:guid}", async (
             Guid boardId, Guid memberId, SetMemberPermissionRequest request,
-            HttpContext context, LapisDbContext db, BoardActivity activity,
+            HttpContext context, WuknaDbContext db, BoardActivity activity,
             BoardRealtimeDispatcher realtime, CancellationToken cancellationToken) =>
         {
             if (!TryGetUserId(context, out var userId)) return Results.Unauthorized();
@@ -255,7 +255,7 @@ public static class BoardEndpoints
             Guid boardId,
             Guid guestId,
             HttpContext context,
-            LapisDbContext db,
+            WuknaDbContext db,
             BoardActivity activity,
             BoardRealtimeDispatcher realtime,
             CancellationToken cancellationToken) =>
@@ -295,7 +295,7 @@ public static class BoardEndpoints
         Guid.TryParse(context.User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value, out userId);
 
     private static Task<bool> IsOwnerAsync(
-        LapisDbContext db,
+        WuknaDbContext db,
         Guid boardId,
         Guid userId,
         CancellationToken cancellationToken) =>

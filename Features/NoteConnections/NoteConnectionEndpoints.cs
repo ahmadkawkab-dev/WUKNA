@@ -1,10 +1,10 @@
-namespace Lapis.Features.NoteConnection;
+namespace Wukna.Features.NoteConnection;
 
 using System.IdentityModel.Tokens.Jwt;
-using Lapis.Features.Board;
-using Lapis.Features.Notes;
-using Lapis.Features.Realtime;
-using Lapis.Shared.Data.AppDbContext;
+using Wukna.Features.Board;
+using Wukna.Features.Notes;
+using Wukna.Features.Realtime;
+using Wukna.Shared.Data.AppDbContext;
 using Microsoft.EntityFrameworkCore;
 
 public sealed record CreateNoteConnectionRequest(
@@ -26,7 +26,7 @@ public static class NoteConnectionEndpoints
         var group = endpoints.MapGroup("/api/boards/{boardId:guid}/connections")
             .RequireAuthorization();
 
-        group.MapGet("/", async (Guid boardId, HttpContext context, LapisDbContext db,
+        group.MapGet("/", async (Guid boardId, HttpContext context, WuknaDbContext db,
             CancellationToken cancellationToken) =>
         {
             if (!TryGetUserId(context, out var userId)) return Results.Unauthorized();
@@ -41,7 +41,7 @@ public static class NoteConnectionEndpoints
         });
 
         group.MapPost("/", async (Guid boardId, CreateNoteConnectionRequest request,
-            HttpContext context, LapisDbContext db, BoardActivity activity,
+            HttpContext context, WuknaDbContext db, BoardActivity activity,
             BoardRealtimeDispatcher realtime,
             CancellationToken cancellationToken) =>
         {
@@ -84,7 +84,7 @@ public static class NoteConnectionEndpoints
         });
 
         group.MapDelete("/{connectionId:guid}", async (Guid boardId, Guid connectionId,
-            HttpContext context, LapisDbContext db, BoardActivity activity,
+            HttpContext context, WuknaDbContext db, BoardActivity activity,
             BoardRealtimeDispatcher realtime,
             CancellationToken cancellationToken) =>
         {
@@ -110,7 +110,7 @@ public static class NoteConnectionEndpoints
     private static bool TryGetUserId(HttpContext context, out Guid userId) =>
         Guid.TryParse(context.User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value, out userId);
 
-    private static async Task<bool?> GetAccessAsync(LapisDbContext db, Guid boardId,
+    private static async Task<bool?> GetAccessAsync(WuknaDbContext db, Guid boardId,
         Guid userId, CancellationToken cancellationToken)
     {
         var membership = await db.BoardMemberships.AsNoTracking()
