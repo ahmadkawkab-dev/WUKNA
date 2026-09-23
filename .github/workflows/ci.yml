@@ -20,10 +20,10 @@ jobs:
           dotnet-version: 10.0.x
 
       - name: Restore
-        run: dotnet restore tests/Lapis.IntegrationTests/Lapis.IntegrationTests.csproj
+        run: dotnet restore tests/Wukna.IntegrationTests/Wukna.IntegrationTests.csproj
 
       - name: Build
-        run: dotnet build tests/Lapis.IntegrationTests/Lapis.IntegrationTests.csproj --configuration Release --no-restore
+        run: dotnet build tests/Wukna.IntegrationTests/Wukna.IntegrationTests.csproj --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test tests/Lapis.IntegrationTests/Lapis.IntegrationTests.csproj --configuration Release --no-build
+        run: dotnet test tests/LWukna.IntegrationTests/Wukna.IntegrationTests.csproj --configuration Release --no-build
