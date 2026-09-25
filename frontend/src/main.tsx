@@ -1,5 +1,5 @@
 import ReactDOM from "react-dom/client";
-import App from "./App";
+import App from "./app/App";
 import { AppErrorBoundary } from "./components/ui/AppErrorBoundary";
 import { FuturePreviewEntry } from "./features/future/FuturePreviewApp";
 import { futurePreviewEnabled, isFuturePreviewPath } from "./features/future/flags";

@@ -58,7 +58,7 @@ test('connections use the nearest note sides and treat direction as one relation
 });
 
 test('desktop properties uses a right-side layout dock instead of an overlay', () => {
-  const source = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
+  const source = readFileSync(new URL('../src/features/boards/BoardWorkspace.tsx', import.meta.url), 'utf8');
   const styles = readFileSync(new URL('../src/styles/board-foundation.css', import.meta.url), 'utf8');
   const canvas = source.indexOf('className="canvas"');
   const inspector = source.indexOf('{inspectorNote && (', canvas);

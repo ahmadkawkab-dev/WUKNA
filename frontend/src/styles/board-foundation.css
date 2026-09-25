@@ -115,6 +115,9 @@
 .canvas-empty h2 { margin: 0; color: var(--foreground); font-size: 1.25rem; font-weight: 600; }
 .canvas-empty p { margin: 0; color: var(--muted-foreground); font-size: var(--text-control); }
 .canvas-empty .wk-button { margin-block-start: var(--space-2); }
+.canvas-empty-add-note { position: relative; min-width: 8.3rem; }
+.canvas-empty-add-note > svg { position: absolute; inset-inline-start: var(--space-3); }
+.canvas-empty-add-note > span { width: 100%; text-align: center; }
 
 .sticky-note {
   --note-foreground: var(--foreground);
