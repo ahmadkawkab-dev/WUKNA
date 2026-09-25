@@ -22,7 +22,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddControllersWithViews();
 builder.Services.AddHealthChecks();
 builder.Services.Configure<FormOptions>(options =>
     options.MultipartBodyLengthLimit = 5 * 1024 * 1024 + 64 * 1024);
@@ -169,8 +168,7 @@ builder.Services.AddAuthorization();
 builder.Services.AddAntiforgery(options =>
 {
     options.HeaderName = "X-CSRF-TOKEN";
-    // Retain the established name so already-open forms keep their matching antiforgery token.
-    options.Cookie.Name = "lapis.csrf";
+    options.Cookie.Name = "wukna.csrf";
     options.Cookie.SameSite = SameSiteMode.Strict;
     options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
         ? CookieSecurePolicy.None
@@ -199,8 +197,6 @@ app.MapNoteConnectionEndpoints();
 app.MapProfileEndpoints();
 app.MapHub<BoardHub>(BoardHub.Path, options =>
     options.CloseOnAuthenticationExpiration = true).RequireAuthorization();
-
-app.MapControllerRoute(name: "default", pattern: "{controller=Health}/{action=Index}/{id?}");
 
 app.Run();
 

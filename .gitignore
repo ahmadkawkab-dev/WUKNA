@@ -30,6 +30,7 @@ secrets.json
 *.key
 *.snk
 
+
 # Frontend dependencies, generated output, and tool caches
 **/node_modules/
 **/dist/
@@ -76,3 +77,4 @@ Desktop.ini
 
 # Keep the root README tracked
 !/README.md
+!/docs/GOOGLE_OAUTH_VERIFICATION.md

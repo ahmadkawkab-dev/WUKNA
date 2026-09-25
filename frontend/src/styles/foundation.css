@@ -92,7 +92,7 @@ button, input, textarea, select, a { -webkit-tap-highlight-color: transparent; }
 .wk-app-error h1, .wk-app-error p { max-width: 38rem; margin: 0; }
 .wk-app-error p { color: var(--muted-foreground); overflow-wrap: anywhere; }
 .wk-app-error button { min-height: var(--target-size); padding-inline: var(--space-4); border: 1px solid var(--control-border); border-radius: var(--radius-control); color: var(--foreground); background: var(--surface); cursor: pointer; }
-.wk-startup p { margin: 0; }
+.wk-startup p { margin: 0; padding-inline-start: calc(2.5rem + var(--space-3)); }
 @media (max-width: 480px) {
   .wk-auth { padding: var(--space-5) var(--space-4); }
   .wk-auth-content { padding-block: var(--space-8); }
