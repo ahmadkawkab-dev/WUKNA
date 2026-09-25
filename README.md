@@ -77,25 +77,8 @@ dotnet user-secrets set 'Authentication:Google:ClientSecret' '<google-client-sec
 
 Register `http://localhost:5173/api/auth/external/google/provider-callback` as an authorized redirect URI for the Google OAuth client. Start sign-in through the frontend origin so Vite can proxy the callback to the API.
 
-### 3. Start PostgreSQL and apply migrations
 
-For a new local installation, create the `wukna` database. If you already have a database named `lapis`, preserve it by stopping the API and renaming it in place. Connect to the maintenance database (usually `postgres`), check that the old database has no other active sessions, then run the `ALTER DATABASE` command only after they are gone:
-
-```sql
-SELECT pid, application_name, client_addr
-FROM pg_stat_activity
-WHERE datname = 'lapis' AND pid <> pg_backend_pid();
-
-ALTER DATABASE lapis RENAME TO wukna;
-```
-
-Do not drop or recreate the database. The migration history and user data stay in the renamed database. Then run:
-
-```sh
-dotnet ef database update
-```
-
-### 4. Run the API
+### 3. Run the API
 
 ```sh
 dotnet run --launch-profile http
@@ -103,7 +86,7 @@ dotnet run --launch-profile http
 
 The development API listens on `http://localhost:8080`; `GET /health` checks whether the process is responding. Profile images are stored under `App_Data/profile-images` by default, so the API process needs write access there.
 
-### 5. Run the frontend
+### 4. Run the frontend
 
 In a second terminal:
 
