@@ -38,6 +38,15 @@ services:
     ports:
       - "127.0.0.1:8082:8080"
 
+  cloudflared:
+     image: cloudflare/cloudflared:latest
+     command: tunnel --no-autoupdate run
+     restart: unless-stopped
+     env_file:
+       - .env.tunnel
+     depends_on:
+       - frontend
+
 volumes:
   postgres_data:
   profile_images:
