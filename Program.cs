@@ -10,6 +10,7 @@ using Wukna.Shared.Data.AppDbContext;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Http.Features;
@@ -17,6 +18,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Text;
+using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -175,10 +177,16 @@ builder.Services.AddAntiforgery(options =>
         : CookieSecurePolicy.Always;
 });
 
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedProto;
+    options.KnownProxies.Add(IPAddress.Parse("172.20.0.4"));
+});
+
 var app = builder.Build();
 
    
-
+app.UseForwardedHeaders();
 app.UseSwagger();
 app.UseSwaggerUI();
 
