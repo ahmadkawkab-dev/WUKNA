@@ -1,0 +1,74 @@
+name: wukna-prod
+
+services:
+  db:
+    image: postgres:17-alpine
+    platform: linux/arm64
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: wukna
+      POSTGRES_USER: wukna
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  api:
+    image: ghcr.io/ahmadkawkab-dev/wukna-api:sha-${WUKNA_IMAGE_SHA:?Set WUKNA_IMAGE_SHA}
+    platform: linux/arm64
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Postgres: "Host=db;Port=5432;Database=wukna;Username=wukna;Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}"
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY}
+      Authentication__Google__ClientId: ${GOOGLE_CLIENT_ID:?Set GOOGLE_CLIENT_ID}
+      Authentication__Google__ClientSecret: ${GOOGLE_CLIENT_SECRET:?Set GOOGLE_CLIENT_SECRET}
+      Authentication__Google__FrontendBaseUrl: ${PUBLIC_ORIGIN:?Set PUBLIC_ORIGIN}
+      ReverseProxy__KnownProxyIp: 172.28.88.10
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - profile_images:/app/App_Data/profile-images
+      - data_protection_keys:/app/App_Data/data-protection-keys
+    networks:
+      - data
+      - edge
+
+  frontend:
+    image: ghcr.io/ahmadkawkab-dev/wukna-frontend:sha-${WUKNA_IMAGE_SHA:?Set WUKNA_IMAGE_SHA}
+    platform: linux/arm64
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "127.0.0.1:8082:8080"
+    networks:
+      edge:
+        ipv4_address: 172.28.88.10
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+networks:
+  edge:
+    ipam:
+      config:
+        - subnet: 172.28.88.0/24
+  data:
+    internal: true
+
+volumes:
+  postgres_data:
+  profile_images:
+  data_protection_keys:

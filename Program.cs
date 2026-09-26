@@ -71,7 +71,12 @@ builder.Services.AddScoped<GoogleAccountLinkService>();
 builder.Services.AddHostedService<ExternalLoginGrantCleanupService>();
 // Keep the pre-rename cryptographic application name so existing protected auth payloads
 // remain readable across deployment of the Wukna identifiers.
-builder.Services.AddDataProtection().SetApplicationName("Lapis");
+var dataProtection = builder.Services.AddDataProtection().SetApplicationName("Lapis");
+if (builder.Environment.IsProduction())
+{
+    dataProtection.PersistKeysToFileSystem(
+        new System.IO.DirectoryInfo("/app/App_Data/data-protection-keys"));
+}
 
 builder.Services.AddIdentityCore<User>(options =>
     {
@@ -180,7 +185,20 @@ builder.Services.AddAntiforgery(options =>
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedProto;
-    options.KnownProxies.Add(IPAddress.Parse("172.20.0.4"));
+
+    if (builder.Environment.IsProduction())
+    {
+        if (!IPAddress.TryParse(builder.Configuration["ReverseProxy:KnownProxyIp"], out var proxyIp))
+            throw new InvalidOperationException(
+                "ReverseProxy:KnownProxyIp must be a valid IP address in Production.");
+
+        options.KnownProxies.Add(proxyIp);
+        options.KnownProxies.Add(proxyIp.MapToIPv6());
+    }
+    else
+    {
+        options.KnownProxies.Add(IPAddress.Parse("172.20.0.4"));
+    }
 });
 
 var app = builder.Build();

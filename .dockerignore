@@ -22,5 +22,6 @@ appsettings.*.local.json
 *.snk
 postgres-data
 App_Data/profile-images
+App_Data/data-protection-keys
 *.log
 logs
