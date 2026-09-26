@@ -55,7 +55,7 @@ jobs:
     name: Build and publish images
     needs: [backend, frontend]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
       packages: write
@@ -76,6 +76,7 @@ jobs:
       - name: Build and push API
         uses: docker/build-push-action@v7
         with:
+          platforms: linux/arm64
           context: .
           file: ./Dockerfile
           push: true
@@ -84,6 +85,7 @@ jobs:
       - name: Build and push frontend
         uses: docker/build-push-action@v7
         with:
+          platforms: linux/arm64
           context: .
           file: ./Dockerfile.frontend
           push: true
