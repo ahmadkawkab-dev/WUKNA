@@ -59,6 +59,10 @@ export function AuthScreen({ mode, error: initialError, onSuccess, navigate }: {
               {busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}<ArrowRight size={18} aria-hidden="true" />
             </Button>
           </form>
+          {mode === 'register' && <p className="wk-auth-consent">
+            By creating an account, you agree to our <a href="/terms">terms of service</a> and
+            acknowledge our <a href="/privacy">privacy policy</a>.
+          </p>}
           <div className="wk-auth-divider"><span>or</span></div>
           <Button variant="secondary" onClick={startGoogleLogin} disabled={busy}>Continue with Google</Button>
           <p className="wk-auth-switch">
@@ -70,7 +74,14 @@ export function AuthScreen({ mode, error: initialError, onSuccess, navigate }: {
         </div>
         <p className="wk-auth-caption">A thought, a plan, a place to begin.</p>
       </section>
-      <footer className="wk-auth-footer"><span>Wukna by Hushframe</span><ThemeControl /></footer>
+      <footer className="wk-auth-footer">
+        <span>Wukna by Hushframe</span>
+        <nav className="wk-auth-legal" aria-label="Legal links">
+          <a href="/privacy">Privacy policy</a>
+          <a href="/terms">Terms of service</a>
+        </nav>
+        <ThemeControl />
+      </footer>
     </main>
   );
 }

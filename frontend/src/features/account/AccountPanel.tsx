@@ -287,6 +287,10 @@ export function AccountPanel({
       </section>
       </>}
       </div>
+      <nav className="wk-account-legal" aria-label="Legal links">
+        <a href="/privacy">Privacy policy</a>
+        <a href="/terms">Terms of service</a>
+      </nav>
     </div>
   );
 }

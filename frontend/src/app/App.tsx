@@ -19,6 +19,7 @@ import {
   type ProfileDto,
 } from "../api";
 import { AuthScreen } from "../features/auth/AuthScreen";
+import { PrivacyPolicyPage, PublicHome, TermsOfServicePage } from "../features/public/PublicPages";
 import { AccountPanel } from "../features/account/AccountPanel";
 import { accountSectionForPath } from "../features/account/accountRoute";
 import { Wordmark } from "../components/brand/Wordmark";
@@ -138,7 +139,7 @@ export default function App() {
     return () => setSessionExpiredHandler(null);
   }, []);
   useEffect(() => {
-    if (!starting && !session && path !== "/login" && path !== "/register") {
+    if (!starting && !session && !["/", "/login", "/register", "/privacy", "/terms"].includes(path)) {
       window.history.replaceState(null, "", "/login");
       setPath("/login");
     }
@@ -215,8 +216,11 @@ export default function App() {
     if (!session || !boardId) return;
     return realtimeConnection.subscribeBoard(boardId);
   }, [boardId, session?.user.id]);
+  if (path === "/privacy") return <PrivacyPolicyPage />;
+  if (path === "/terms") return <TermsOfServicePage />;
   if (starting)
     return <div className="wk-startup"><Wordmark /><p role="status">Restoring your session…</p></div>;
+  if (!session && path === "/") return <PublicHome />;
   if (!session)
     return (
       <AuthScreen
