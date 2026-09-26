@@ -7,6 +7,7 @@ import "./styles.css";
 import "./styles/fonts.css";
 import "./styles/tokens.css";
 import "./styles/foundation.css";
+import "./styles/public-pages.css";
 import "./styles/shell.css";
 import "./styles/boards.css";
 import "./styles/board-foundation.css";
