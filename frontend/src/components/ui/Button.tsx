@@ -1,5 +1,5 @@
 import { forwardRef, type ButtonHTMLAttributes } from 'react';
-import { LoaderCircle } from 'lucide-react';
+import { BrandMark } from '../brand/BrandMark';
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: 'primary' | 'secondary' | 'quiet' | 'danger';
@@ -15,7 +15,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   return <button ref={ref} type={type} {...props} disabled={disabled || loading} aria-busy={loading || undefined}
     className={`wk-button wk-button--${variant} wk-button--${size}${loading ? ' wk-button--loading' : ''} ${className}`.trim()}>
     <span className="wk-button-content" aria-hidden={loading || undefined}>{children}</span>
-    <span className="wk-button-progress" aria-hidden={!loading || undefined}><LoaderCircle size={16} aria-hidden="true" /><span className={loadingLabel ? undefined : "wk-sr-only"}>{loadingLabel ?? "Working…"}</span></span>
+    <span className="wk-button-progress" aria-hidden={!loading || undefined}><BrandMark motion={loading ? 'loading' : 'still'} /><span className={loadingLabel ? undefined : "wk-sr-only"}>{loadingLabel ?? "Working…"}</span></span>
   </button>;
 });
 

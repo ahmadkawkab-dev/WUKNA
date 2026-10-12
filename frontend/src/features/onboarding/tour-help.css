@@ -3,8 +3,6 @@
 .wk-icon-button.wk-tour-replay { flex-shrink: 0; width: var(--target-size); min-width: var(--target-size); min-height: var(--target-size); padding: 0; color: var(--muted-foreground); border-radius: var(--radius-control); }
 html:not([data-input-modality='pointer']) .wk-tour-replay:focus-visible { color: var(--foreground); background: var(--hover); }
 @media (hover: hover) { .wk-tour-replay:hover, html:not([data-input-modality='pointer']) .wk-tour-replay:focus-visible { color: var(--foreground); background: var(--hover); } }
-.wk-tour-help-icon { display: inline-block; width: 1.125rem; height: 1.125rem; flex-shrink: 0; background: currentColor; mask: url("/icons/flaticon-help.png") center / contain no-repeat; -webkit-mask: url("/icons/flaticon-help.png") center / contain no-repeat; }
-.wk-tour-icon-credit { color: var(--muted-foreground); font-size: var(--text-meta); margin: var(--space-2) 0 var(--space-4); }
-.wk-tour-icon-credit a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.wk-tour-help-icon { display: inline-block; width: 1.125rem; height: 1.125rem; flex-shrink: 0; background: currentColor; mask: url("/icons/guided-tour.svg") center / contain no-repeat; -webkit-mask: url("/icons/guided-tour.svg") center / contain no-repeat; }
 .wk-sidebar--collapsed .wk-sidebar-account-area { flex-direction: column; }
 .wk-mobile-account-area { display: flex; align-items: center; gap: var(--space-1); }

@@ -1,0 +1,95 @@
+/* Fold tones follow the resolved semantic palette. Never collapse them to one fill. */
+:root {
+  --brand-left-front: var(--primary);
+  --brand-left-return: color-mix(in srgb, var(--primary) 35%, var(--foreground));
+  --brand-left-inner: color-mix(in srgb, var(--primary) 75%, var(--foreground));
+  --brand-right-inner: color-mix(in srgb, var(--primary) 22%, var(--surface));
+  --brand-right-fold: color-mix(in srgb, var(--primary) 58%, var(--surface));
+  --brand-right-front: color-mix(in srgb, var(--primary) 85%, var(--foreground));
+  --brand-right-return: color-mix(in srgb, var(--primary) 15%, var(--foreground));
+  --brand-foot: color-mix(in srgb, var(--primary) 40%, var(--surface));
+}
+.wk-brand-mark { display: block; flex: none; width: 2rem; height: 2rem; overflow: visible; forced-color-adjust: none; }
+.wk-brand-mark [data-brand-face='left-front'], .wk-brand-mark [data-brand-back='left-front'] { fill: var(--brand-left-front); }
+.wk-brand-mark [data-brand-face='left-return'], .wk-brand-mark [data-brand-back='left-return'] { fill: var(--brand-left-return); }
+.wk-brand-mark [data-brand-face='left-inner'], .wk-brand-mark [data-brand-back='left-inner'] { fill: var(--brand-left-inner); }
+.wk-brand-mark [data-brand-face='right-inner'], .wk-brand-mark [data-brand-back='right-inner'] { fill: var(--brand-right-inner); }
+.wk-brand-mark [data-brand-face='right-fold'], .wk-brand-mark [data-brand-back='right-fold'] { fill: var(--brand-right-fold); }
+.wk-brand-mark [data-brand-face='right-front'], .wk-brand-mark [data-brand-back='right-front'] { fill: var(--brand-right-front); }
+.wk-brand-mark [data-brand-face='right-return'], .wk-brand-mark [data-brand-back='right-return'] { fill: var(--brand-right-return); }
+.wk-brand-mark [data-brand-face='foot'], .wk-brand-mark [data-brand-back='foot'] { fill: var(--brand-foot); }
+.wk-brand-panel { transform-box: view-box; transform-origin: 49.4118% 80.3333%; }
+.wk-brand-mark--loading .wk-brand-panel { animation: wk-brand-fold 1200ms var(--ease-settle) infinite; }
+.wk-brand-mark--loading .wk-brand-panel--1 { animation-delay: -800ms; }
+.wk-brand-mark--loading .wk-brand-panel--2 { animation-delay: -400ms; }
+@keyframes wk-brand-fold { 0%, 20%, 80%, 100% { transform: none; } 45% { transform: scaleY(.975) rotate(-.45deg); } }
+.wk-brand-mark--welcome .wk-brand-panel { animation: wk-brand-gather 640ms var(--ease-settle) backwards; }
+.wk-brand-mark--welcome .wk-brand-panel--1 { animation-delay: 80ms; }
+.wk-brand-mark--welcome .wk-brand-panel--2 { animation-delay: 160ms; }
+@keyframes wk-brand-gather { from { transform: translateY(8px) scaleY(.94); } to { transform: none; } }
+.wk-brand-mark--success .wk-brand-panel--2 { animation: wk-brand-settle var(--motion-signal) var(--ease-settle); }
+@keyframes wk-brand-settle { 0%, 100% { transform: none; } 35% { transform: translateY(-3px); } }
+.wk-brand-neon-edges { fill: none; stroke: color-mix(in srgb, var(--primary) 35%, var(--surface)); stroke-width: 1.25px; stroke-linejoin: round; filter: drop-shadow(0 0 2px var(--primary)) drop-shadow(0 0 6px var(--primary)); }
+.wk-brand-neon-edges > path { stroke-dasharray: .22 .78; animation: wk-brand-neon 2600ms linear infinite; }
+.wk-brand-neon-edges > path:nth-child(even) { animation-delay: -1300ms; }
+@keyframes wk-brand-neon { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+/* Animate the SVG, leaving its layout box and wordmark fixed. One stomp per hover. */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .wk-brand-mark:hover { transform-origin: 50% 95%; animation: wk-brand-stomp 480ms var(--ease-settle); }
+  .wk-brand-recovery .wk-brand-mark:hover { animation: none; }
+}
+@keyframes wk-brand-stomp {
+  0%, 100% { transform: none; }
+  25% { transform: translateY(-4px) scale(.97, 1.04); }
+  52% { transform: translateY(2px) scale(1.07, .9); }
+  76% { transform: translateY(-1px) scale(.99, 1.02); }
+}
+.wukna-wordmark { font-family: 'Instrument Sans', var(--font-ui); font-weight: 600; letter-spacing: -.04em; }
+.wk-brand-state { min-width: 0; width: 100%; min-height: 14rem; display: grid; align-content: center; justify-items: center; gap: var(--space-6); padding: var(--space-8) var(--space-4); color: var(--foreground); text-align: center; }
+.wk-brand-state--fullscreen { min-height: 100vh; min-height: 100dvh; background: var(--background); }
+.wk-brand-state-lockup { display: grid; justify-items: center; gap: var(--space-5); }
+.wk-brand-state-lockup > .wk-brand-mark { width: clamp(7rem, 24vw, 11rem); height: auto; }
+.wk-brand-state-lockup > span { font: 600 clamp(1.75rem, 5vw, 2.5rem)/1 'Instrument Sans', var(--font-ui); letter-spacing: -.04em; }
+.wk-brand-state--fullscreen .wk-brand-state-lockup { gap: var(--space-6); }
+.wk-brand-state--fullscreen .wk-brand-mark { width: clamp(11rem, 50vw, 20rem); }
+.wk-brand-state--fullscreen .wk-brand-state-lockup > span { font-size: clamp(2.5rem, 8vw, 3.5rem); }
+.wk-brand-state > p { max-width: 32rem; margin: 0; color: var(--muted-foreground); font-size: var(--text-body); line-height: var(--leading-body); }
+.wk-brand-recovery { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: var(--space-6); color: var(--foreground); background: var(--background); text-align: center; }
+.wk-brand-recovery-content { width: min(100%, 23rem); display: grid; justify-items: center; gap: var(--space-4); }
+.wk-brand-recovery .wk-brand-state-lockup { gap: var(--space-3); margin-block-end: var(--space-2); }
+.wk-brand-recovery .wk-brand-mark { width: clamp(9rem, 32vw, 12rem); height: auto; }
+.wk-brand-recovery .wk-brand-state-lockup > span { font-size: 1.875rem; }
+.wk-brand-recovery-copy { display: grid; gap: var(--space-2); width: 100%; }
+.wk-brand-recovery-copy h1 { margin: 0; font-size: var(--text-page-title); font-weight: 600; line-height: 1.35; letter-spacing: -.02em; }
+.wk-brand-recovery-copy p { margin: 0; color: var(--muted-foreground); font-size: var(--text-control); line-height: var(--leading-body); overflow-wrap: anywhere; }
+.wk-loading-brand { display: flex; align-items: center; justify-content: center; gap: var(--space-3); min-height: 3.5rem; margin-block-end: var(--space-4); color: var(--muted-foreground); font-size: var(--text-control); }
+.wk-loading-brand .wk-brand-mark { width: 2.5rem; height: 2.5rem; }
+.wk-loading--chat .wk-loading-brand, .wk-loading--form .wk-loading-brand { justify-content: start; }
+.wk-button-progress > .wk-brand-mark { width: 1.375rem; height: 1rem; }
+.wk-button--primary.wk-button--loading:disabled { color: var(--primary-foreground); background: var(--primary); border-color: var(--primary); }
+/* Pending button surfaces invert the source ink so the folds stay visible on accents. */
+.wk-button--primary .wk-button-progress {
+  --brand-left-front: var(--primary-foreground);
+  --brand-left-return: color-mix(in srgb, var(--primary-foreground) 45%, var(--primary));
+  --brand-left-inner: color-mix(in srgb, var(--primary-foreground) 72%, var(--primary));
+  --brand-right-inner: color-mix(in srgb, var(--primary-foreground) 30%, var(--primary));
+  --brand-right-fold: color-mix(in srgb, var(--primary-foreground) 58%, var(--primary));
+  --brand-right-front: color-mix(in srgb, var(--primary-foreground) 85%, var(--primary));
+  --brand-right-return: color-mix(in srgb, var(--primary-foreground) 20%, var(--primary));
+  --brand-foot: color-mix(in srgb, var(--primary-foreground) 65%, var(--primary));
+}
+.wk-realtime-health > .wk-brand-mark, .chat-status > .wk-brand-mark { width: 1.5rem; height: 1.125rem; }
+.wk-sidebar-brand > .wk-brand-mark { width: 2.25rem; height: 1.75rem; }
+.wk-sidebar-brand-copy strong, .wk-mobile-brand > strong { font-family: 'Instrument Sans', var(--font-ui); font-weight: 600; letter-spacing: -.04em; }
+.wk-sidebar .wk-sidebar-brand-copy strong { font-size: 1.125rem; }
+.wk-mobile-brand > .wk-brand-mark { width: 2rem; height: 1.5rem; }
+.wk-mobile-brand > strong { font-size: 1.25rem; }
+@media (prefers-reduced-motion: reduce) {
+  .wk-brand-mark, .wk-brand-panel, .wk-brand-neon-edges > path { animation: none !important; transform: none !important; }
+  .wk-brand-neon-edges > path { stroke-dasharray: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  html[data-brand-hidden='true'] .wk-brand-mark,
+  html[data-brand-hidden='true'] .wk-brand-panel,
+  html[data-brand-hidden='true'] .wk-brand-neon-edges > path { animation-play-state: paused; }
+}

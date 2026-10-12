@@ -3,7 +3,11 @@ import { detectCodeLanguage, readLocalCodeDocument } from './documents/codeFiles
 
 export const libraryFileLimit = 20_000_000;
 export const documentAccept = '.pdf,.docx,.xlsx,.md,' + '.cs,.ts,.tsx,.js,.jsx,.mjs,.cjs,.css,.html,.htm,.py,.sql,.json,.sh,.bash,.txt';
-export const pictureAccept = '.jpg,.jpeg,.png,.webp';
+export const pictureAccept = 'image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp,.JPG,.JPEG,.PNG,.WEBP';
+export const libraryFileAccept = `${pictureAccept},${documentAccept}`;
+export function libraryFileCategory(file: Pick<File, 'name'>): 'picture' | 'document' {
+  return /\.(jpe?g|png|webp)$/i.test(file.name) ? 'picture' : 'document';
+}
 export async function inspectLibraryFile(file: File, category: Exclude<LibraryCategory, 'video'>) {
   if (file.size > libraryFileLimit) throw new Error('Choose a file smaller than 20 MB. Code and text files must be smaller than 256 KB.');
   const extension = file.name.split('.').at(-1)?.toLowerCase();

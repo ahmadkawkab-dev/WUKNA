@@ -22,9 +22,9 @@ import { AuthScreen } from "../features/auth/AuthScreen";
 import { PrivacyPolicyPage, PublicHome, TermsOfServicePage } from "../features/public/PublicPages";
 const AccountPanel = lazy(() => import("../features/account/AccountPanel").then((module) => ({ default: module.AccountPanel })));
 import { accountSectionForPath } from "../features/account/accountRoute";
-import { Wordmark } from "../components/brand/Wordmark";
+import { BrandRecovery, BrandState } from '../components/brand/BrandState';
+import type { PrismPlaybackState } from '../components/brand/prismPlayback';
 import { OnboardingProvider } from "../features/onboarding/OnboardingProvider";
-import { Button } from "../components/ui/Button";
 import { LoadingSkeleton } from "../components/ui/LoadingSkeleton";
 import { Notice } from "../components/ui/Notice";
 import { BoardLanding } from "../features/boards/BoardLanding";
@@ -38,6 +38,8 @@ import { clearBrowserNotificationSession } from "../features/notifications/brows
 const NotificationsPage = lazy(() => import("../features/notifications/NotificationsPage").then((module) => ({ default: module.NotificationsPage })));
 import { SoonPage } from "../features/future/PreviewUI";
 import { isLibraryPath, safeLibraryReturnPath } from '../features/library/libraryRoutes';
+import { clearLibraryShare, pendingLibrarySharePath } from '../features/library/libraryShare';
+import { clearPictureThumbnailCache } from '../features/library/pictureThumbnailCache';
 const LibraryRoot = lazy(() => import('../features/library/LibraryRoot').then(module => ({ default: module.LibraryRoot })));
 const WorkspaceShell = lazy(() => import('../features/library/LibraryAppShell').then(module => ({ default: module.LibraryAppShell })));
 const Workspace = lazy(() => import("../features/boards/BoardWorkspace").then((module) => ({ default: module.Workspace })));
@@ -68,6 +70,7 @@ export default function App() {
     [boardsReady, setBoardsReady] = useState(false),
     [failure, setFailure] = useState("");
   const started = useRef(false);
+  const openingMotion = useRef<PrismPlaybackState>({ elapsed: 0 });
   const paletteAccountId = session?.user.id ?? null;
   useEffect(() => {
     if (!paletteAccountId) syncBoardVariations(null, []);
@@ -81,6 +84,11 @@ export default function App() {
     setPath(new URL(next, window.location.origin).pathname);
     window.dispatchEvent(new Event("wukna:navigation"));
   }, []);
+  useEffect(() => {
+    const shared = () => { if (pendingLibrarySharePath()) navigate('/library/videos'); };
+    window.addEventListener('wukna:library-share', shared);
+    return () => window.removeEventListener('wukna:library-share', shared);
+  }, [navigate]);
   useEffect(() => {
     const pop = () => setPath(window.location.pathname);
     window.addEventListener("popstate", pop);
@@ -106,11 +114,12 @@ export default function App() {
         }
         if (code) {
           setSession(await exchangeGoogleCode(code));
-          navigate(takeNotificationReturnPath() ?? "/home");
+          navigate(pendingLibrarySharePath() ?? takeNotificationReturnPath() ?? "/home");
           return;
         }
       }
       const restored = await bootstrapSession();
+      if (!restored) void clearPictureThumbnailCache();
       setSession(restored);
       if (restored && window.location.pathname === "/home") { const target = takeNotificationReturnPath(); if (target) navigate(target); }
       if (restored && callbackError) notify(callbackError);
@@ -165,6 +174,7 @@ export default function App() {
   );
   useEffect(() => {
     setSessionExpiredHandler(() => {
+      void clearPictureThumbnailCache();
       setSession(null);
       setBoards([]);
       setBoardsReady(false);
@@ -192,7 +202,9 @@ export default function App() {
       await clearBrowserNotificationSession(true, session?.user.id).catch(() => undefined);
       if (all) await logoutEverywhere();
       else await logout();
+      await clearPictureThumbnailCache();
       takeNotificationReturnPath(); returnPath.current = null;
+      clearLibraryShare();
       setSession(null);
       setBoards([]);
       setBoardsReady(false);
@@ -293,12 +305,9 @@ export default function App() {
   if (path === "/privacy") return <PrivacyPolicyPage />;
   if (path === "/terms") return <TermsOfServicePage />;
   if (starting)
-    return <div className="wk-startup"><Wordmark /><p role="status">Restoring your session…</p></div>;
+    return <BrandState fullscreen motion="prism" playback={openingMotion.current} label="Restoring your session…" />;
   if (startupBlocked)
-    return <div className="wk-startup"><Wordmark /><h1>Could not restore your session</h1>
-      <p role="alert">{startupError}</p>
-      <Button onClick={() => void initializeSession()}>Try again</Button>
-    </div>;
+    return <BrandRecovery playback={openingMotion.current} reason={startupError} onRetry={() => void initializeSession()} />;
   if (!session && path === "/") return <PublicHome />;
   if (!session)
     return (
@@ -309,7 +318,7 @@ export default function App() {
         onSuccess={(value) => {
           setSession(value);
           setStartupError("");
-          navigate(returnPath.current ?? takeNotificationReturnPath() ?? "/home"); returnPath.current = null; takeNotificationReturnPath();
+          navigate(returnPath.current ?? pendingLibrarySharePath() ?? takeNotificationReturnPath() ?? "/home"); returnPath.current = null; takeNotificationReturnPath();
         }}
       />
     );
@@ -321,11 +330,11 @@ export default function App() {
   ) {
     window.history.replaceState(null, "", "/home");
     queueMicrotask(() => setPath("/home"));
-    return <div className="wk-startup"><Wordmark /><p role="status">Opening your workspace…</p></div>;
+    return <BrandState fullscreen motion="prism" playback={openingMotion.current} label="Opening your workspace…" />;
   }
   return (
     <OnboardingProvider key={session.user.id} ready={boardsReady && !loading && !failure} path={path}>
-    <Suspense fallback={<LoadingSkeleton label="Opening workspace" layout="dashboard" />}><WorkspaceShell
+    <Suspense fallback={<BrandState fullscreen motion="prism" playback={openingMotion.current} label="Opening your workspace…" />}><WorkspaceShell
       libraryEnabled={true}
       user={session.user}
       boards={boards}

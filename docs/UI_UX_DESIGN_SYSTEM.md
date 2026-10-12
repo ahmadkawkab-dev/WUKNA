@@ -206,6 +206,8 @@ Action feedback uses the shared 120ms color, border, and shadow transitions with
 
 ### Inputs
 
+Every search bar uses the shared `SearchInput` clear control. A visible × appears when text is present, clears the query in one action, and returns focus to the input. It is keyboard-accessible, never submits a surrounding form, and reserves space so entered text cannot overlap it. Library-wide search uses one header field and displays results within Dashboard, with no separate Global Search navigation destination. Its × also clears the submitted term and restores the dashboard overview. Sidebar utilities leave 12px between New board and Search boards.
+
 Inputs have persistent labels, tokenized borders and surfaces, 14px compact desktop text or 16px editor text, visible invalid state, and visible keyboard focus. Touch/narrow input text is at least 16px, including dense feature forms, to avoid browser zoom on focus. Placeholder text is supplemental, not a label. Required shared fields include a visible hint; associated errors are announced. Authentication supports paste/autofill and a password disclosure control. Read-only information stays selectable.
 
 ### Dialogs, panels, and sheets
@@ -397,6 +399,8 @@ Color Studio palettes use three coordinated families: dominant workspace/canvas,
 Board colors use six stable slots across Home, Boards, sidebar indicators, and individual board chrome/canvas. New automatic boards use unused slots before balanced reuse; personal assignment history persists per account on this browser. Explicit shared choices retain the existing six server IDs and take priority, with palette-specific labels and swatches. Members render shared slots through their own theme. Original-theme accents remain Sage, Blue, Lavender, Clay, Gold, and Rose. Versioned writes and existing board events synchronize manual choices; automatic histories can differ between devices. Color changes update scoped CSS without touching board geometry or interaction state. See [Color Studio](COLOR_STUDIO.md) for persistence and accessibility details.
 
 ## Motion
+
+The approved folded W retains eight distinct theme-derived faces in every state. Full-screen session restore and workspace opening use the eight-second W → prism → full 360° turn → W loop; smaller loading and reconnecting feedback retain the fold treatment. A failed session restore keeps the same prism loop alongside a compact centered error reason and retry action, including when the API server is unavailable; hovering an app logo plays one short stomp, except on the failed session recovery screen. These brand treatments are the explicitly approved exception to the general decorative-motion guidance. Session recovery, retry and workspace opening share one playback phase without a reset. They never delay readiness, pause in hidden tabs, and retain static folds under reduced motion. See [BRAND_IDENTITY.md](../BRAND_IDENTITY.md) for the implemented assets and timing.
 
 Typical timing guidance:
 

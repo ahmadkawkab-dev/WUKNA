@@ -1,4 +1,5 @@
 import { LoadingSkeleton } from "../../components/ui/LoadingSkeleton";
+import { BrandMark } from '../../components/brand/BrandMark';
 import { memo, useEffect, useId, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { Bell, ArrowDown, CalendarClock, ImagePlus, RefreshCw, Send, Settings, X } from "lucide-react";
 import { Avatar } from "../../components/ui/Avatar";
@@ -98,7 +99,7 @@ export function ChatPanel({ controller, snapshot, boardTitle, onClose, scrollPos
   const muted = controller.isMuted(now);
   const wait = Math.max(0, Math.ceil((snapshot.cooldownUntil - now) / 1000));
   const canSend = controller.canSend(now);
-  const status = snapshot.status === "connected" ? "Live" : snapshot.status === "offline" ? "Offline · retrying" : "Connecting…";
+  const status = snapshot.status === "connected" ? "Live" : snapshot.status === "offline" ? "Offline · retrying" : snapshot.status === 'reconnecting' ? 'Reconnecting…' : "Connecting…";
   const needsClock = wait > 0 || muted && snapshot.mutedUntil !== null;
 
   useEffect(() => {
@@ -220,7 +221,9 @@ export function ChatPanel({ controller, snapshot, boardTitle, onClose, scrollPos
       <Button ref={closeButton} variant="quiet" size="compact" className="wk-icon-button" aria-label="Close chat" onClick={onClose}><X size={18} /></Button>
     </header>
     {notificationSettings && <BoardNotificationPreferences key={controller.boardId} boardId={controller.boardId} />}
-    <div className="chat-status" role="status"><span className={`chat-status-dot${snapshot.status === "connected" ? " is-live" : ""}`} />
+    <div className="chat-status" role="status">{snapshot.status === 'connected' || snapshot.revoked
+      ? <span className={`chat-status-dot${snapshot.status === "connected" ? " is-live" : ""}`} />
+      : <BrandMark motion={snapshot.status === 'connecting' || snapshot.status === 'reconnecting' ? 'loading' : 'still'} />}
       {snapshot.revoked ? "Access removed" : status}
       {snapshot.joined && snapshot.joined.slowModeSeconds > 0 && <span>Slow mode · {snapshot.joined.slowModeSeconds}s</span>}
     </div>

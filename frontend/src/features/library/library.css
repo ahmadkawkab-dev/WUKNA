@@ -49,7 +49,6 @@
 .wk-library-section-menu > button svg { flex: none; transition: transform var(--motion-layout) var(--ease-settle); }
 .wk-library-section-menu > button[aria-expanded="true"] svg { transform: rotate(180deg); }
 .wk-library-section-menu .wk-library-rail { margin: var(--space-2) 0 0; padding: var(--space-2); border: 1px solid var(--border); border-radius: var(--radius-panel); background: var(--surface); }
-.wk-library-search form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: var(--space-3); max-width: 38rem; }
 .wk-code-file-picker { display: grid; gap: var(--space-2); margin-block: var(--space-5); font-size: var(--text-body); }
 .wk-code-file-picker input { max-width: 100%; min-width: 0; color: var(--foreground); font: inherit; }
 .wk-code-file-picker input::file-selector-button { min-height: var(--target-size); padding: var(--space-2) var(--space-3); margin-inline-end: var(--space-3); border: 1px solid var(--control-border); border-radius: var(--radius-control); color: var(--foreground); background: var(--secondary); cursor: pointer; font: inherit; }
@@ -85,11 +84,11 @@
 .wk-library-layout { display: grid; grid-template-columns: 11rem minmax(0, 1fr); gap: var(--space-6); align-items: start; padding: var(--space-6) var(--page-gutter) var(--space-8); }
 .wk-library--integrated .wk-library-layout { grid-template-columns: minmax(0, 1fr); }
 .wk-library-content { display: flex; flex-direction: column; gap: var(--space-4); container-type: inline-size; }
-.wk-lib-header-search, .wk-lib-header-search label { min-width: 0; }
+.wk-lib-header-search, .wk-lib-header-search-field { min-width: 0; }
 .wk-lib-header-search { display: flex; gap: var(--space-2); align-items: center; max-width: 26rem; }
-.wk-lib-header-search label { display: flex; align-items: center; gap: var(--space-2); padding-inline: var(--space-3); border: 1px solid var(--control-border); border-radius: var(--radius-control); background: var(--surface); color: var(--muted-foreground); }
-.wk-lib-header-search label:focus-within { outline: var(--focus-width) solid var(--focus); outline-offset: calc(-1 * var(--focus-width)); }
-.wk-lib-header-search label input { border: 0; padding-inline: 0; outline: none; box-shadow: none; }
+.wk-lib-header-search-field { display: flex; align-items: center; gap: var(--space-2); padding-inline: var(--space-3); border: 1px solid var(--control-border); border-radius: var(--radius-control); background: var(--surface); color: var(--muted-foreground); }
+.wk-lib-header-search-field:focus-within { outline: var(--focus-width) solid var(--focus); outline-offset: calc(-1 * var(--focus-width)); }
+.wk-lib-header-search .wk-lib-header-search-field input { border: 0; padding-inline-start: 0; outline: none; box-shadow: none; background: transparent; }
 .wk-lib-header-search input, .wk-lib-search-field input, .wk-lib-field select, .wk-lib-field textarea { width: 100%; min-width: 0; min-height: var(--target-size); padding: var(--space-2) var(--space-3); border: 1px solid var(--control-border); border-radius: var(--radius-control); background: var(--surface); color: var(--foreground); font: inherit; }
 .wk-lib-field { display: grid; min-width: 0; gap: var(--space-2); font-size: var(--text-body); }
 .wk-lib-field textarea { resize: vertical; }
@@ -99,7 +98,7 @@
 .wk-lib-search-field { flex: 1; min-width: 0; max-width: 24rem; }
 .wk-lib-toolbar, .wk-lib-section-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .wk-lib-section-heading > div:first-child { min-width: 0; flex: 1 1 20rem; }
-.wk-lib-section-heading > .wk-lib-actions { flex: none; }
+.wk-lib-section-heading > .wk-lib-actions { flex: none; max-width: 100%; }
 .wk-lib-section-heading h2 { overflow-wrap: anywhere; }
 .wk-lib-section-description { margin-block-start: var(--space-2); color: var(--muted-foreground); font-size: var(--text-body); line-height: var(--leading-body); }
 .wk-lib-storage-status { margin: 0; padding: var(--space-3) var(--space-4); border-radius: var(--radius-control); background: var(--secondary); color: var(--muted-foreground); font-size: var(--text-body); }
@@ -149,6 +148,8 @@
 .wk-lib-state { min-width: 0; display: grid; justify-items: center; text-align: center; gap: var(--space-3); padding: var(--space-12) var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-panel); background: var(--surface); animation: wk-content-enter var(--motion-panel) var(--ease-enter) both; }
 .wk-lib-state p { margin: 0; color: var(--muted-foreground); font-size: var(--text-body); max-width: 50ch; }
 .wk-lib-selection, .wk-lib-feedback { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3); padding: var(--space-3); background: var(--selected); border-radius: var(--radius-control); }
+.wk-lib-pagination { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--space-3); margin-top: var(--space-4); }
+.wk-lib-pagination > span { font-size: var(--text-meta); color: var(--muted-foreground); }
 .wk-lib-feedback p { margin: 0; font-size: var(--text-body); }
 .wk-lib-footer { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); font-size: var(--text-meta); color: var(--muted-foreground); }
 .wk-lib-table-wrap { position: relative; min-width: 0; max-width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-panel); }
@@ -181,7 +182,11 @@
 .wk-lib-dropzone input { max-width: 100%; font: inherit; }
 .wk-lib-dropzone input::file-selector-button { padding: var(--space-2) var(--space-3); min-height: var(--target-size); border: 1px solid var(--control-border); border-radius: var(--radius-control); background: var(--surface); color: var(--foreground); cursor: pointer; }
 .wk-lib-upload-queue { padding: 0; list-style: none; margin: 0; display: grid; gap: var(--space-2); }
-.wk-lib-upload-queue li { display: grid; gap: var(--space-1); padding: var(--space-3); background: var(--secondary); border-radius: var(--radius-control); font-size: var(--text-body); overflow-wrap: anywhere; }
+.wk-lib-upload-queue li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2); align-items: start; padding: var(--space-3); background: var(--secondary); border-radius: var(--radius-control); font-size: var(--text-body); overflow-wrap: anywhere; }
+.wk-lib-upload-copy { display: grid; gap: var(--space-1); min-width: 0; }
+.wk-lib-drop-active { outline: 2px dashed var(--primary); outline-offset: -2px; background: var(--secondary); }
+.wk-lib-drop-hint { margin: 0 0 var(--space-3); color: var(--muted-foreground); font-size: var(--text-control); }
+.wk-lib-capture-steps { display: grid; gap: var(--space-2); margin: 0; padding-inline-start: var(--space-5); list-style: decimal; overflow-wrap: anywhere; }
 .wk-lib-upload-queue span { color: var(--muted-foreground); }
 .wk-lib-choices { max-height: 20rem; overflow: auto; display: grid; gap: var(--space-2); }
 .wk-lib-choices label { overflow-wrap: anywhere; font-size: var(--text-body); }
@@ -226,8 +231,7 @@
   .wk-library-navigation .wk-library-link { min-height: var(--target-size); padding: var(--space-2); margin: 0; }
   .wk-library-collection-shortcuts .wk-board-link { min-height: var(--target-size); }
   .wk-lib-header-search { width: 100%; max-width: none; }
-  .wk-library-search form { grid-template-columns: minmax(0, 1fr); }
-  .wk-lib-header-search label { flex: 1; }
+  .wk-lib-header-search-field { flex: 1; }
   .wk-lib-search-field { flex-basis: 100%; max-width: none; }
   .wk-lib-header-search input, .wk-lib-search-field input, .wk-lib-field select, .wk-lib-field textarea { font-size: 1rem; }
   .wk-lib-viewer-dialog { width: calc(100vw - var(--space-4)); }

@@ -6,8 +6,8 @@ import { libraryErrorMessage } from '../contracts';
 import type { LibraryCategory, LibraryCollection, LibraryItemSummary } from '../types';
 
 export type LibraryAction =
-  | { type: 'upload'; category: 'picture' | 'document'; folderId?: string | null }
-  | { type: 'video'; folderId?: string | null }
+  | { type: 'upload'; category?: 'picture' | 'document'; folderId?: string | null; files?: File[]; autoStart?: boolean }
+  | { type: 'video'; folderId?: string | null; url?: string; name?: string; autoStart?: boolean; shareId?: string }
   | { type: 'folder'; category: LibraryCategory; parentId?: string | null }
   | { type: 'collection'; collection?: LibraryCollection }
   | { type: 'rename' | 'metadata'; item: LibraryItemSummary & { notes?: string } }
@@ -16,7 +16,7 @@ export type LibraryAction =
   | { type: 'deleteCollection'; collection: LibraryCollection }
   | { type: 'deleteFolder'; id: string; name: string }
   | { type: 'addCollectionItems'; collectionId: string };
-type UI = { openCollection?: (id: string) => void; act: (action: LibraryAction) => void; open: (id: string, ids?: string[]) => void; navigate: (path: string) => void; notify: (message: string) => void };
+type UI = { captureAvailable?: boolean; openCollection?: (id: string) => void; act: (action: LibraryAction) => void; open: (id: string, ids?: string[]) => void; navigate: (path: string) => void; notify: (message: string) => void };
 const Context = createContext<UI | null>(null);
 export function LibraryUIProvider({ value, children }: { value: UI; children: ReactNode }) { return <Context.Provider value={value}>{children}</Context.Provider>; }
 export function useLibraryUI() { const value = useContext(Context); if (!value) throw new Error('Library UI provider is required.'); return value; }

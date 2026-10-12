@@ -7,6 +7,7 @@ import {
   useSyncExternalStore,
   type PointerEvent as Pointer,
 } from "react";
+import { BrandState } from '../../components/brand/BrandState';
 import {
   ArrowLeft,
   Link2,
@@ -963,7 +964,7 @@ function WorkspaceContent({
         </div>
       </header>
       {loading ? (
-        <div className="workspace-state" data-tour-loading="true">Loading board…</div>
+        <div className="workspace-state" data-tour-loading="true"><BrandState label="Loading board…" /></div>
       ) : failure ? (
         <div className="workspace-state">
           <h2>Board unavailable</h2>

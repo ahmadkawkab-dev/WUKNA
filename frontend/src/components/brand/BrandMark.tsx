@@ -1,12 +1,18 @@
 import type { SVGProps } from 'react';
+import { brandFaces, brandViewBox } from '../../assets/brand/geometry';
 
-/** Three gathered pieces leave an open center; also usable as a monochrome mark. */
-export function BrandMark(props: SVGProps<SVGSVGElement>) {
+export type BrandMotion = 'still' | 'loading' | 'welcome' | 'success' | 'neon';
+
+/** All folds retain distinct theme-derived fills, including at small sizes. */
+export function BrandMark({ className = '', motion = 'still', ...props }: SVGProps<SVGSVGElement> & { motion?: BrandMotion }) {
   return (
-    <svg viewBox="0 0 48 48" fill="currentColor" aria-hidden="true" focusable="false" {...props}>
-      <path d="M8 27C1 14 10 5 25 6C26 16 20 24 8 27Z" />
-      <path d="M29 8C41 7 48 20 40 33C31 30 27 21 29 8Z" />
-      <path d="M7 32C16 26 24 39 37 35C34 47 13 47 7 32Z" />
+    <svg {...props} viewBox={brandViewBox} className={`wk-brand-mark wk-brand-mark--${motion} ${className}`.trim()} aria-hidden="true" focusable="false">
+      {[0, 1, 2].map(panel => <g className={`wk-brand-panel wk-brand-panel--${panel}`} key={panel}>
+        {brandFaces.filter(face => face.panel === panel).map(face => <path key={face.id} data-brand-face={face.id} d={face.path} />)}
+      </g>)}
+      {motion === 'neon' && <g className="wk-brand-neon-edges">
+        {brandFaces.map(face => <path key={face.id} d={face.path} pathLength="1" vectorEffect="non-scaling-stroke" />)}
+      </g>}
     </svg>
   );
 }

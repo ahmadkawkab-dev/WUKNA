@@ -1,4 +1,4 @@
-import { FileText, FolderOpen, HardDrive, Heart, Images, Search, Trash2, Video } from 'lucide-react';
+import { FileText, FolderOpen, HardDrive, Heart, Images, Trash2, Video } from 'lucide-react';
 import { libraryDestinations, type LibrarySection } from '../libraryRoutes';
 import { useLibraryCollections, useLibrarySummary } from '../hooks/useLibraryQueries';
 import { Button } from '../../../components/ui/Button';
@@ -9,7 +9,7 @@ function LibraryDashboardIcon({ size = 16 }: { size?: number }) {
 }
 
 const icons = { dashboard: LibraryDashboardIcon, pictures: Images, documents: FileText, videos: Video,
-  collections: FolderOpen, favorites: Heart, trash: Trash2, storage: HardDrive, search: Search };
+  collections: FolderOpen, favorites: Heart, trash: Trash2, storage: HardDrive };
 const categories: Partial<Record<LibrarySection, LibraryCategory>> = { pictures: 'picture', documents: 'document', videos: 'video' };
 
 export function LibraryNavigation({ section, navigate }: { section: LibrarySection | null; navigate: (path: string) => void }) {

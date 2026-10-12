@@ -154,6 +154,10 @@ have been removed; new accounts start empty. See the
 [final acceptance record](docs/PERSONAL_LIBRARY_ACCEPTANCE.md) for verification
 and deployment prerequisites.
 
+Library supports dropping files into Pictures/Documents and links into Videos.
+[YouTube capture setup](docs/LIBRARY_CAPTURE.md) covers the desktop browser
+extension and installed Android app share target.
+
 ### Pictures
 
 A dedicated visual library for saving and organizing images.

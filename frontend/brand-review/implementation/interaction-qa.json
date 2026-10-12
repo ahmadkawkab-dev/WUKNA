@@ -1,0 +1,14 @@
+{
+  "environment": "Local Chromium; synthetic API responses; no real backend mutations",
+  "paletteCases": 14,
+  "recovery": "Centered desktop/mobile heading, actual reason, retry",
+  "neon": "Animated edges, eight opaque tonal faces",
+  "hover": "One 480 ms stomp; static reduced motion",
+  "retry": "Loading then immediately ready",
+  "signIn": "Pending brand button then workspace",
+  "collapsed": "Brand mark fits sidebar",
+  "browserErrors": [],
+  "frontendTests": 306,
+  "typecheck": "passed",
+  "productionBuild": "passed"
+}

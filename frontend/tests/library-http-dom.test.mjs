@@ -61,6 +61,32 @@ async function fixture(run, handler) {
 }
 const tree = (path = '/library/videos', key = 'first') => React.createElement(LibraryRoot, { key, accountId: 'owner', path, navigate: () => {} });
 
+test('dashboard search uses one field, survives remount, and clears back to the overview without a separate destination', () => fixture(async ({ dom, render, settle, calls }) => {
+  const navigate = target => { dom.window.history.pushState(null, '', target); dom.window.dispatchEvent(new dom.window.Event('wukna:navigation')); };
+  const dashboard = key => React.createElement(LibraryRoot, { key, accountId: 'owner', path: '/library', navigate });
+  dom.window.history.replaceState(null, '', '/library');
+  await render(dashboard('first')); await settle();
+  assert.equal(document.querySelectorAll('input[aria-label="Search your library"]').length, 1);
+  assert.doesNotMatch(document.querySelector('nav[aria-label="Library navigation"]').textContent, /Global Search/);
+  await act(async () => {
+    const input = document.querySelector('input[aria-label="Search your library"]');
+    Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set.call(input, 'matching');
+    input.dispatchEvent(new window.Event('input', { bubbles: true }));
+  });
+  await act(async () => { document.querySelector('.wk-lib-header-search').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })); await wait(40); }); await settle();
+  assert.equal(dom.window.location.pathname, '/library');
+  assert.equal(new URLSearchParams(dom.window.location.search).get('search'), 'matching');
+  assert.match(document.querySelector('.wk-library-search').textContent, /Results for “matching”/);
+  assert.ok(calls.some(call => call.path === '/api/library/items' && call.query.get('search') === 'matching'));
+  await render(dashboard('reload')); await settle();
+  assert.equal(document.querySelector('input[aria-label="Search your library"]').value, 'matching');
+  await act(async () => document.querySelector('button[aria-label="Clear Library header search"]').click()); await settle();
+  assert.equal(dom.window.location.search, '');
+  assert.ok(document.querySelector('.wk-lib-dashboard'));
+  assert.equal(document.querySelector('.wk-library-search'), null);
+  assert.equal(document.activeElement, document.querySelector('input[aria-label="Search your library"]'));
+}));
+
 test('default Library renders authenticated backend data and disables storage controls without preview tools', () => fixture(async ({ render, settle, calls }) => {
   await render(tree('/library/documents')); await settle();
   assert.equal(document.querySelector('.wk-library-preview-bar'), null); assert.equal(document.querySelector('.wk-library-preview-settings'), null);
@@ -137,6 +163,59 @@ test('processing document details keep nullable asset metadata and complete brea
   contentReference: null, asset: { id: 'asset', contentType: null, checksum: null, processingStatus: 'processing', sizeBytes: 0, originalFileName: 'code.ts' },
   folderId: 'deep', folderBreadcrumb: [{ id: 'first', name: 'First' }, { id: 'deep', name: 'Deep' }] }) : null));
 
+test('favorite changes and focus refresh metadata without requesting loaded thumbnails again', async () => {
+  const originalCreate = URL.createObjectURL, originalRevoke = URL.revokeObjectURL;
+  URL.createObjectURL = () => 'blob:cached-picture'; URL.revokeObjectURL = () => {};
+  let favorite = false;
+  try {
+    await fixture(async ({ dom, render, settle, calls }) => {
+      await render(React.createElement(LibraryProvider, { accountId: 'owner' },
+        tree('/library/pictures'), React.createElement(LibraryThumbnail, { item: { ...video('picture', 'Cached picture'), category: 'picture', thumbnailReference: '/api/library/items/picture/thumbnail' } })));
+      await settle();
+      assert.equal(document.querySelector('.wk-lib-card img')?.getAttribute('src'), 'blob:cached-picture');
+      await act(async () => document.querySelector('button[aria-label="Add Cached picture to favorites"]').click()); await settle();
+      assert.equal(document.querySelector('button[aria-label="Remove Cached picture from favorites"]').getAttribute('aria-pressed'), 'true');
+      await act(async () => dom.window.dispatchEvent(new dom.window.Event('focus'))); await settle();
+      assert.equal(calls.filter(call => call.path.endsWith('/thumbnail')).length, 1);
+      assert.ok(calls.filter(call => call.path === '/api/library/items').length >= 3);
+    }, call => {
+      if (call.path.endsWith('/thumbnail')) return new Response('preview', { headers: { 'Content-Type': 'image/png' } });
+      if (call.method === 'PATCH') { favorite = call.body.favorite; return new Response(null, { status: 204 }); }
+      if (call.path === '/api/library/items') return Response.json({ items: [{ ...video('picture', 'Cached picture'), favorite, category: 'picture', thumbnailReference: '/api/library/items/picture/thumbnail' }], nextCursor: null });
+    });
+  } finally { URL.createObjectURL = originalCreate; URL.revokeObjectURL = originalRevoke; }
+});
+
+test('Pictures renders one bounded page, fetches the next on demand and resets on filters', () => fixture(async ({ render, settle, calls }) => {
+  await render(tree('/library/pictures')); await settle();
+  assert.equal(document.querySelectorAll('.wk-lib-card').length, 24);
+  assert.match(document.querySelector('.wk-lib-pagination').textContent, /Page 1/);
+  assert.equal(calls.filter(call => call.query.has('cursor')).length, 0);
+  await act(async () => document.querySelector('.wk-lib-select input').click());
+  const next = [...document.querySelectorAll('.wk-lib-pagination button')].find(button => button.textContent.includes('Next'));
+  await act(async () => next.click()); await settle();
+  assert.equal(document.querySelectorAll('.wk-lib-card').length, 2);
+  assert.match(document.querySelector('.wk-lib-pagination').textContent, /Page 2/);
+  assert.equal(document.querySelector('.wk-lib-selection'), null);
+  assert.ok(next.disabled);
+  const before = calls.length;
+  await act(async () => document.querySelector('.wk-lib-pagination button').click()); await settle();
+  assert.equal(document.querySelectorAll('.wk-lib-card').length, 24); assert.equal(calls.length, before);
+  await act(async () => next.click()); await settle();
+  await act(async () => {
+    const input = document.querySelector('input[aria-label="Filter Library items"]');
+    Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set.call(input, 'matching');
+    input.dispatchEvent(new window.Event('input', { bubbles: true }));
+  }); await settle();
+  assert.match(document.querySelector('.wk-lib-pagination').textContent, /Page 1/);
+  assert.equal(document.querySelectorAll('.wk-lib-card').length, 1);
+}, call => {
+  if (call.path !== '/api/library/items') return null;
+  assert.equal(call.query.get('limit'), '24');
+  const filtered = call.query.get('search') === 'matching', later = call.query.has('cursor');
+  return Response.json({ items: Array.from({ length: filtered ? 1 : later ? 2 : 24 }, (_, index) => ({ ...video(`${later ? 'later' : 'first'}-${index}`, `Picture ${index}`), category: 'picture' })), nextCursor: filtered || later ? null : 'page-two' });
+}));
+
 test('storage displays the server account limit and keeps upgrades disabled', () => fixture(async ({ render, settle, calls }) => {
   await render(tree('/library/storage')); await settle();
   assert.match(document.body.textContent, /Free · 1.0 GB/);
@@ -147,3 +226,17 @@ test('storage displays the server account limit and keeps upgrades disabled', ()
   assert.ok(calls.some(call => call.path === '/api/subscriptions/storage-plans'));
   assert.equal(calls.some(call => call.method === 'POST'), false);
 }));
+
+test('a failed next picture page keeps the current page visible and Retry restarts its cursor', () => fixture(async ({ render, settle, click, calls }) => {
+  await render(tree('/library/pictures')); await settle();
+  await act(async () => [...document.querySelectorAll('.wk-lib-pagination button')].find(button => button.textContent.includes('Next')).click()); await settle();
+  assert.match(document.querySelector('[role="alert"]').textContent, /expired/);
+  assert.equal(document.querySelectorAll('.wk-lib-card').length, 1);
+  assert.match(document.querySelector('.wk-lib-pagination').textContent, /Page 1/);
+  await click('Retry');
+  assert.equal(document.querySelector('[role="alert"]'), null);
+  assert.equal(document.querySelectorAll('.wk-lib-card').length, 1);
+  assert.equal(calls.filter(call => call.query.has('cursor')).length, 1);
+}, call => call.path === '/api/library/items' ? call.query.has('cursor')
+  ? Response.json({ code: 'library_invalid_cursor' }, { status: 400 })
+  : Response.json({ items: [{ ...video('picture', 'Visible picture'), category: 'picture' }], nextCursor: 'expired' }) : null));

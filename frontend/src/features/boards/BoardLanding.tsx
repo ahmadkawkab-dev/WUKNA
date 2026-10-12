@@ -10,6 +10,7 @@ import type { BoardListItemDto } from "../../api";
 import { AuthApiError, errorMessage } from "../../api";
 import { BrandMark } from "../../components/brand/BrandMark";
 import { Button } from "../../components/ui/Button";
+import { SearchInput } from '../../components/ui/SearchInput';
 import { BoardActionsDialog } from "./BoardActionsDialog";
 import { BoardPreview } from "./BoardPreview";
 import { boardCardTone, type BoardCardTone } from "./boardCardTone";
@@ -294,12 +295,13 @@ export function BoardLanding({
 
         <div className="wk-board-library-toolbar"><div className="wk-board-search">
           <Search size={16} aria-hidden="true" />
-          <input
+          <SearchInput
             type="search"
             value={query}
             aria-label="Search your boards"
             placeholder="Search your boards…"
-            onChange={(event) => setQuery(event.target.value)}
+            onValueChange={setQuery}
+            clearLabel="Clear boards search"
           />
         </div>
           {!loading && !failure && <span className="wk-board-library-summary" role="status">{plural(shown.length, "board")}{normalizedQuery ? " found" : " in your workspace"}</span>}

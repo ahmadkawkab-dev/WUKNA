@@ -48,6 +48,8 @@ control height and 44px touch/narrow-screen target. Dropdown focus uses the shar
 inset ring; pointer selections clear the action highlight while preserving DOM
 focus, and keyboard navigation restores the visible ring.
 
+Library-wide search uses one field in the header and displays results within Dashboard. The separate Global Search destination and duplicate search form have been removed. Header search and browse filters use the shared clearable input; its × clears immediately and returns input focus. Clearing an active dashboard query restores the overview. Search terms use `/library?search=…` so reload and browser history preserve results; “View all recent” opens `/library?view=all`. Category filters, sorting, file actions, and pagination remain available in dashboard results. Existing `/library/search` links remain an alias for the dashboard's all-recent view.
+
 The opt-in `frontend/tests/browser-library-layout.mjs` checks intercepted HTTP
 presentation responses in a disposable Opera profile. It does not seed runtime
 Library data or make backend mutations. Evidence lives in
@@ -97,8 +99,9 @@ Implemented design decisions:
 
 ## Available flows
 
-All nine routes are implemented: Dashboard, Pictures, Documents (including code),
-Videos, Collections, Favorites, Trash, Storage Management, and Global Search.
+Eight destinations are implemented: Dashboard, Pictures, Documents (including code),
+Videos, Collections, Favorites, Trash, and Storage Management. Library-wide search
+and all recent items are integrated into Dashboard.
 
 The shared file browser supports nested folders, category/type filters, name/tag/
 code search, sorting, grid/list modes, pagination, selection, and bulk organization
@@ -118,6 +121,24 @@ retry and requests server cancellation. Limits are 20 MB per file and 256 KB for
 code/text; the server validates actual content and scans originals and picture
 derivatives before publication. The account ceiling is 1,000,000,000 bytes.
 The former development preview queue has been removed.
+The Add files dialog closes immediately after every selected file has been
+confirmed saved, including after a successful retry. The Library keeps the
+success notice visible. A partial failure or cancellation keeps the dialog open
+with its remaining files and retry controls.
+Queued and failed files have an accessible × action to remove them from the
+queue before uploading or retrying. Queue edits are disabled during an active
+batch, and completed files retain their saved status. Removing the last pending
+file disables Upload files and returns focus to the file chooser.
+Dashboard Upload accepts both supported pictures and documents in one chooser,
+including JPG/JPEG and PNG. Each file is validated and saved to the root of
+Pictures or Documents according to its format. Category-specific uploads retain
+their folder selection and filters. Picture filters include MIME types and both
+lowercase and uppercase extensions for native file choosers.
+Dashboard category panels and category sections also accept dropped device files
+or video links and start the same save flow automatically. Open folders retain
+the drop destination. YouTube sharing uses the desktop extension or installed
+Android app share target; setup and boundaries are documented in
+[Library capture](LIBRARY_CAPTURE.md).
 
 Video links support canonical YouTube/Vimeo URLs and other HTTPS providers.
 Only validated YouTube/Vimeo IDs can create an embedded player, and only after
@@ -157,7 +178,8 @@ refresh cookies remain HttpOnly. Existing callers retain their session behavior.
 
 Writes wait for server confirmation. Successful writes cancel reads, restart
 paginated item/folder/collection lists, and invalidate details, summary/storage,
-capabilities and Blob queries. Failed writes show recoverable errors and preserve
+capabilities and original-file Blob queries. Immutable thumbnail queries are reused;
+confirmed Trash/purge commands evict that item's disk and memory previews. Failed writes show recoverable errors and preserve
 the current display; there are no speculative optimistic changes to roll back.
 Retry on a paginated list starts from its first page so expired cursors cannot
 trap the UI. Returning focus/visibility refreshes metadata and restarts pages.
@@ -179,8 +201,30 @@ inside Documents in the read-only viewer.
 
 Private thumbnails and file content are fetched through fixed item-ID API paths
 with authentication, never by inserting an API URL into an image/object/link.
-Thumbnail responses must be PNG. `useLibraryBlob` keeps Blob data in the account
-cache and creates component-owned temporary URLs; replacement, account changes,
+Thumbnail responses must be PNG. Picture thumbnails use an account-bound IndexedDB
+cache with a 32 MiB / 128-entry limit, a seven-day expiry, and eviction of the least
+recently viewed entries as new previews arrive. Only verified PNG preview responses
+up to the server's 1 MB thumbnail budget are stored. Keys include account, item, and
+reference. No tokens, cookies, original files, private HTML or API responses enter
+the service-worker cache. An authenticated session is checked before and after
+every local preview read. Sign-out/session expiry clear disk previews and fence late
+writes; activating another account removes previous-account entries.
+
+Pictures renders one page of up to 24 items, including picture folders and picture
+search results. Previous/Next uses the server's opaque cursors; later pages are
+requested only on Next. Filters/sort start at page one, page changes clear selection,
+and the viewer navigates only the visible page. Cold previews load one at a time to
+avoid saturating the server transfer gate, with two bounded retries for temporary
+503 failures. Each successful cache transaction completes before its Blob reaches
+the image. Cached previews bypass thumbnail API requests on later visits/reloads.
+Old picture Blob queries leave memory when their last observer unmounts; disk
+previews remain reusable until expired, removed or evicted. IndexedDB failures fall
+back to authenticated fetches. Metadata/session restoration still require the API;
+this is a preview cache rather than a fully offline Library. Original-file downloads
+remain authenticated. When an original picture is unavailable, its cached thumbnail
+can still appear in the viewer.
+
+`useLibraryBlob` creates component-owned temporary URLs; replacement, account changes,
 and unmount revoke them and cancel pending fetches. Video-thumbnail failure falls
 back to its icon. Provider players load only on explicit request, and validated
 provider IDs determine the iframe URL. Complete folder paths use server
@@ -197,7 +241,28 @@ API failures show retryable errors and cannot fall back to demo data.
 
 ## Final verification
 
-The final frontend passed typecheck, all 298 tests and production build. The
+The picture-cache change passed typecheck, all 334 frontend tests, and production
+build. The opt-in `tests/browser-picture-cache.mjs` check used real scanned JPG/PNG
+uploads: five cold thumbnails loaded with concurrency one; a reload with simulated
+storage failures made zero thumbnail API calls. It also checked original-picture
+failure fallback, desktop/mobile layout, Trash eviction, sign-out cleanup, actual
+IndexedDB persistence, account isolation, seven-day expiry and entry/byte limits.
+`tests/picture-cache.test.mjs` covers storage-disabled fallback and cancellation,
+while HTTP DOM tests cover paging, filter reset, metadata refresh reuse and cursor
+failure recovery. Reports/screenshots are in ignored `artifacts/picture-cache/`.
+Run the opt-in browser check with a localhost Vite/API/storage stack:
+
+```bash
+WUKNA_LIBRARY_HTTP_ORIGIN=http://127.0.0.1:5181 \
+WUKNA_PLAYWRIGHT_MODULE=/absolute/path/to/playwright/index.mjs \
+WUKNA_CHROMIUM_PATH=/absolute/path/to/chrome \
+node tests/browser-picture-cache.mjs
+```
+
+The script purges only its own test files; its output records the disposable
+account identity for subsequent local test-account cleanup.
+
+The earlier Library integration passed typecheck, all 298 tests and production build. The
 retired mock-only tests were removed; HTTP route, server plan catalog and disabled
 checkout assertions were added. Both opt-in real API browser flows passed on
 desktop and mobile with storage enabled. They confirm an empty new account,
@@ -322,7 +387,9 @@ Focused corrections:
 - Mount feature-owned navigation in the app shell's sidebar slot using a React
   portal, preserving the feature's query/context boundary. Reuse native global
   navigation classes, icon size, typography, selected colors, and radii. Keep
-  Dashboard, Storage Management, and Global Search names; code stays in Documents.
+  Dashboard and Storage Management names; code stays in Documents. The later
+  search consolidation removes Global Search from navigation and merges results
+  into Dashboard.
 - Clicking the active Library button toggles the section list, with a disclosure
   arrow, `aria-expanded`, and `aria-controls`. Hiding the list retains its slot,
   current route, and file selection; it does not recreate a second feature rail.

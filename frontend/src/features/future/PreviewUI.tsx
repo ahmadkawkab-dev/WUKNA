@@ -1,6 +1,7 @@
-import { Search, X } from "lucide-react";
+import { Search } from "lucide-react";
 import { useId, type ReactNode } from "react";
 import { Button } from "../../components/ui/Button";
+import { SearchInput } from '../../components/ui/SearchInput';
 
 export function PreviewPage({ title, description, children }: { title: string; description: string; children: ReactNode }) {
   return <div className="wk-future-page">
@@ -30,8 +31,7 @@ export function PreviewSearch({ label, value, onChange, placeholder }: { label: 
   const id = useId();
   return <div className="wk-preview-search">
     <label htmlFor={id}>{label}</label>
-    <div><Search size={18} aria-hidden="true" /><input id={id} type="search" value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} />
-      {value && <button aria-label={`Clear ${label.toLowerCase()}`} onClick={() => onChange("")}><X size={17} /></button>}</div>
+    <div><Search size={18} aria-hidden="true" /><SearchInput id={id} type="search" value={value} placeholder={placeholder} onValueChange={onChange} clearLabel={`Clear ${label.toLowerCase()}`} /></div>
   </div>;
 }
 

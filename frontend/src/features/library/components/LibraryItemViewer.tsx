@@ -18,7 +18,7 @@ export function LibraryItemViewer({ id, ids, onChange, onClose }: { id: string; 
   const index = ids.indexOf(id); const detail = item.data;
   const capabilities = useLibraryCapabilities();
   const content = useLibraryBlob(id, 'content', detail?.contentReference);
-  const thumbnail = useLibraryBlob(id, 'thumbnail', detail?.thumbnailReference);
+  const thumbnail = useLibraryBlob(id, 'thumbnail', detail?.thumbnailReference, detail?.category === 'picture');
   const downloadAvailable = capabilities.data?.storageAvailable === true && detail?.processingStatus === 'available' && Boolean(content.url);
   useEffect(() => { setZoom(1); setPlay(false); }, [id]);
   const browse = (direction: number) => { if (index >= 0 && ids[index + direction]) onChange(ids[index + direction]); };
@@ -45,7 +45,7 @@ export function LibraryItemViewer({ id, ids, onChange, onClose }: { id: string; 
       {detail.category !== 'video' && capabilities.data?.storageAvailable !== true && <p role="status">File storage is temporarily unavailable. Try again later.</p>}
       {content.error && <p role="alert">{libraryErrorMessage(content.error)} <Button variant="quiet" onClick={() => void content.retry()}>Retry file</Button></p>}
       <div className="wk-lib-viewer-layout"><div className="wk-lib-viewer-content">
-        {detail.category === 'picture' && <><div ref={image} className="wk-lib-picture-stage">{content.url ? <img src={content.url} alt={detail.alt} style={{ transform: `scale(${zoom})`, transformOrigin: zoom > 1 ? 'top left' : 'center' }} /> : <p>Original picture unavailable.</p>}</div>
+        {detail.category === 'picture' && <><div ref={image} className="wk-lib-picture-stage">{content.url || thumbnail.url ? <img src={content.url ?? thumbnail.url!} alt={detail.alt} style={{ transform: `scale(${zoom})`, transformOrigin: zoom > 1 ? 'top left' : 'center' }} /> : <p>Original picture unavailable.</p>}</div>
           <div className="wk-lib-zoom"><IconButton label="Zoom out" disabled={zoom <= 0.5} onClick={() => setZoom(value => Math.max(0.5, value - 0.25))}><Minus size={16} /></IconButton>
             <span>{Math.round(zoom * 100)}%</span><IconButton label="Zoom in" disabled={zoom >= 3} onClick={() => setZoom(value => Math.min(3, value + 0.25))}><Plus size={16} /></IconButton>
             <Button variant="quiet" onClick={() => setZoom(1)}>Fit to screen</Button><Button variant="quiet" onClick={() => { if (image.current?.requestFullscreen) void image.current.requestFullscreen().catch(() => notify('Full screen is unavailable.')); else notify('Full screen is unavailable.'); }}><Expand size={16} /> Full screen</Button></div></>}

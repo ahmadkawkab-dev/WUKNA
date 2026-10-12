@@ -8,12 +8,13 @@ import { IconButton } from "../ui/Button";
 import { useReplayTour } from "../../features/onboarding/OnboardingProvider";
 import { Dialog } from "../ui/Dialog";
 import { isLibraryPath } from '../../features/library/libraryRoutes';
+import { BrandMark } from '../brand/BrandMark';
 
 export function MobileHeader({ onHome, onOpenAccount, user }: { onHome: () => void; onOpenAccount: () => void; user: AuthSession["user"] }) {
   const replayTour = useReplayTour();
   return <header className="wk-mobile-header">
     <button className="wk-mobile-brand" onClick={onHome} aria-label="Wukna home">
-      <span className="wk-sidebar-monogram" aria-hidden="true">W</span><strong>Wukna</strong>
+      <BrandMark motion="welcome" /><strong>wukna</strong>
     </button>
     <div className="wk-mobile-account-area">
     <IconButton className="wk-tour-replay" data-tour="replay" label="Replay onboarding tour" title="Take the Wukna tour" onClick={() => replayTour?.()}><TourHelpIcon /></IconButton>

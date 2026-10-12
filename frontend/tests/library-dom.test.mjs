@@ -29,7 +29,9 @@ const { AppShell, StorageMeter, LibraryRoot, LibraryProvider, LibraryShell, Libr
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function withDom(run) {
   const dom = new JSDOM('<!doctype html><body><div id="root"></div></body>', { url: 'http://localhost/library', pretendToBeVisual: true });
-  const names = ['window', 'document', 'HTMLElement', 'Element', 'Event', 'KeyboardEvent', 'requestAnimationFrame', 'cancelAnimationFrame', 'IS_REACT_ACT_ENVIRONMENT'];
+  dom.window.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
+  dom.window.HTMLDialogElement.prototype.close = function () { this.open = false; };
+  const names = ['window', 'document', 'sessionStorage', 'Node', 'HTMLElement', 'Element', 'Event', 'KeyboardEvent', 'requestAnimationFrame', 'cancelAnimationFrame', 'IS_REACT_ACT_ENVIRONMENT'];
   const originals = new Map(names.map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
   for (const name of names) Object.defineProperty(globalThis, name, { configurable: true, writable: true, value: name === 'IS_REACT_ACT_ENVIRONMENT' ? true : dom.window[name] });
   const root = createRoot(document.getElementById('root'));
@@ -53,13 +55,162 @@ const readApi = () => ({
 });
 const rootTree = props => React.createElement(LibraryProvider, { accountId: props.accountId, createApi: readApi }, React.createElement(LibraryRoot, props));
 
+async function uploadFixture(run, addFile, path = '/library/pictures', names = ['first.png', 'second.png']) {
+  return withDom(async ({ dom, render, settle }) => {
+    const api = { ...readApi(), capabilities: async () => ({ storageAvailable: true, checkoutEnabled: false }), addFile };
+    await render(React.createElement(LibraryProvider, { accountId: 'upload-owner', createApi: () => api },
+      React.createElement(LibraryRoot, { accountId: 'upload-owner', path, navigate: () => {} })));
+    await settle();
+    const click = async label => {
+      const button = [...document.querySelectorAll('button')].find(button => button.querySelector('.wk-button-content')?.textContent.trim() === label);
+      assert.ok(button, label);
+      await act(async () => button.click()); await settle(30);
+    };
+    await click('Upload');
+    await act(async () => {
+      const input = document.querySelector('input[type="file"]');
+      Object.defineProperty(input, 'files', { configurable: true, value: names.map(name => new dom.window.File(['file'], name)) });
+      input.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+    });
+    await run({ click, settle });
+  });
+}
+
+test('Dashboard Upload includes JPG and PNG in the chooser and routes a mixed batch into Pictures and Documents', async () => {
+  const uploaded = [];
+  await uploadFixture(async ({ click, settle }) => {
+    const accept = document.querySelector('input[type="file"]').accept.split(',');
+    for (const type of ['image/jpeg', 'image/png', '.jpg', '.JPG', '.png', '.PNG', '.ts']) assert.ok(accept.includes(type), type);
+    await click('Upload files'); await settle(100);
+    assert.deepEqual(uploaded, [
+      { name: 'photo.jpg', category: 'picture', folderId: null },
+      { name: 'diagram.PNG', category: 'picture', folderId: null },
+      { name: 'notes.ts', category: 'document', folderId: null },
+    ]);
+    assert.equal(document.querySelector('.wk-lib-action-dialog'), null);
+    assert.match(document.querySelector('.wk-lib-feedback').textContent, /3 files saved to Library/);
+  }, async ({ file, category, folderId }) => { uploaded.push({ name: file.name, category, folderId }); }, '/library', ['photo.jpg', 'diagram.PNG', 'notes.ts']);
+});
+
+test('the upload dialog closes only after the last selected file is confirmed and preserves the success notice', async () => {
+  const pending = [], names = [];
+  await uploadFixture(async ({ click, settle }) => {
+    await click('Upload files');
+    assert.ok(document.querySelector('.wk-lib-action-dialog'));
+    assert.deepEqual(names, ['first.png']);
+    assert.equal(document.querySelector('button[aria-label="Remove second.png from queue"]').disabled, true, 'queue edits cannot shift an active batch');
+    await act(async () => pending.shift()()); await settle(30);
+    assert.ok(document.querySelector('.wk-lib-action-dialog'), 'the first completed file does not close a multi-file queue');
+    assert.deepEqual(names, ['first.png', 'second.png']);
+    await act(async () => pending.shift()()); await settle(30);
+    assert.equal(document.querySelector('.wk-lib-action-dialog'), null);
+    assert.match(document.querySelector('.wk-lib-feedback').textContent, /2 files saved to Library/);
+  }, async ({ file }) => { names.push(file.name); await new Promise(resolve => pending.push(resolve)); });
+});
+
+test('dropping a picture onto its Dashboard panel uploads automatically and closes on readiness', () => withDom(async ({ dom, render, settle }) => {
+  const captured = [];
+  const api = { ...readApi(), capabilities: async () => ({ storageAvailable: true }), addFile: async input => { captured.push(input); } };
+  await render(React.createElement(LibraryProvider, { accountId: 'drop-owner', createApi: () => api }, React.createElement(LibraryRoot, { accountId: 'drop-owner', path: '/library', navigate: () => {} }))); await settle();
+  const file = new dom.window.File(['image'], 'dropped.png');
+  const event = new dom.window.Event('drop', { bubbles: true, cancelable: true });
+  Object.defineProperty(event, 'dataTransfer', { value: { files: [file], types: ['Files'], getData: () => '' } });
+  await act(async () => document.querySelector('.wk-lib-category-grid button').dispatchEvent(event)); await settle(120);
+  assert.equal(captured.length, 1); assert.equal(captured[0].file, file); assert.equal(captured[0].category, 'picture');
+  assert.equal(document.querySelector('.wk-lib-action-dialog'), null);
+  assert.match(document.querySelector('.wk-lib-feedback').textContent, /1 file saved/);
+}));
+
+test('dropping a video link saves automatically without requiring file storage', () => withDom(async ({ dom, render, settle }) => {
+  const captured = [];
+  const api = { ...readApi(), addVideo: async input => { captured.push(input); } };
+  await render(React.createElement(LibraryProvider, { accountId: 'drop-owner', createApi: () => api }, React.createElement(LibraryRoot, { accountId: 'drop-owner', path: '/library/videos', navigate: () => {} }))); await settle();
+  const event = new dom.window.Event('drop', { bubbles: true, cancelable: true });
+  Object.defineProperty(event, 'dataTransfer', { value: { files: [], types: ['text/plain'], getData: () => 'https://youtu.be/aqz-KE-bpKQ' } });
+  await act(async () => document.querySelector('.wk-lib-browse').dispatchEvent(event)); await settle(120);
+  assert.equal(captured.length, 1); assert.equal(captured[0].url, 'https://www.youtube.com/watch?v=aqz-KE-bpKQ');
+  assert.equal(document.querySelector('.wk-lib-action-dialog'), null);
+  assert.match(document.querySelector('.wk-lib-feedback').textContent, /Video link saved/);
+}));
+
+test('an incoming share survives initial route reset and saves once under StrictMode', () => withDom(async ({ render, settle }) => {
+  const captured = [];
+  sessionStorage.setItem('wukna.library.shared-video', JSON.stringify({ id: '11111111-1111-4111-8111-111111111111', name: 'Incoming video', url: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ', createdAt: Date.now() }));
+  const api = { ...readApi(), addVideo: async input => { captured.push(input); } };
+  await render(React.createElement(React.StrictMode, null, React.createElement(LibraryProvider, { accountId: 'share-owner', createApi: () => api }, React.createElement(LibraryRoot, { accountId: 'share-owner', path: '/library/videos', navigate: () => {} })))); await settle(200);
+  assert.equal(captured.length, 1); assert.equal(captured[0].name, 'Incoming video');
+  assert.equal(document.querySelector('.wk-lib-action-dialog'), null);
+  assert.equal(sessionStorage.getItem('wukna.library.shared-video'), null);
+}));
+
+test('removing a queued file excludes it from upload and keeps keyboard focus on the file chooser', async () => {
+  const names = [];
+  await uploadFixture(async ({ click }) => {
+    await act(async () => document.querySelector('button[aria-label="Remove first.png from queue"]').click());
+    assert.equal(document.querySelectorAll('.wk-lib-upload-queue li').length, 1);
+    assert.doesNotMatch(document.querySelector('.wk-lib-upload-queue').textContent, /first.png/);
+    assert.equal(document.activeElement, document.querySelector('input[type="file"]'));
+    await click('Upload files');
+    assert.deepEqual(names, ['second.png']);
+    assert.equal(document.querySelector('.wk-lib-action-dialog'), null);
+  }, async ({ file }) => { names.push(file.name); });
+});
+
+test('removing every queued file disables uploading without submitting or closing the dialog', async () => {
+  const names = [];
+  await uploadFixture(async () => {
+    for (const name of ['first.png', 'second.png']) {
+      const button = document.querySelector(`button[aria-label="Remove ${name} from queue"]`);
+      assert.equal(button.type, 'button');
+      await act(async () => button.click());
+    }
+    assert.equal(document.querySelectorAll('.wk-lib-upload-queue li').length, 0);
+    assert.equal(document.querySelector('.wk-lib-form button[type="submit"]').disabled, true);
+    assert.ok(document.querySelector('.wk-lib-action-dialog'));
+    assert.deepEqual(names, []);
+  }, async ({ file }) => { names.push(file.name); });
+});
+
+test('a failed file can be removed from the retry queue while completed files stay saved', async () => {
+  await uploadFixture(async ({ click }) => {
+    await click('Upload files');
+    assert.equal(document.querySelector('button[aria-label="Remove first.png from queue"]'), null);
+    await act(async () => document.querySelector('button[aria-label="Remove second.png from queue"]').click());
+    assert.equal(document.querySelectorAll('.wk-lib-upload-queue li').length, 1);
+    assert.match(document.querySelector('.wk-lib-upload-queue').textContent, /first.pngAdded/);
+    assert.equal(document.querySelector('.wk-lib-form button[type="submit"]').disabled, true);
+  }, async ({ file }) => { if (file.name === 'second.png') throw new Error('controlled upload failure'); });
+});
+
+test('partial upload failure stays open and a successful retry closes without uploading completed files again', async () => {
+  const names = []; let fail = true;
+  await uploadFixture(async ({ click }) => {
+    await click('Upload files');
+    assert.ok(document.querySelector('.wk-lib-action-dialog'));
+    assert.match(document.querySelector('.wk-lib-upload-queue').textContent, /controlled upload failure/);
+    assert.match(document.querySelector('.wk-lib-feedback').textContent, /1 file saved to Library/);
+    fail = false; await click('Retry remaining files');
+    assert.equal(document.querySelector('.wk-lib-action-dialog'), null);
+    assert.deepEqual(names, ['first.png', 'second.png', 'second.png']);
+  }, async ({ file }) => { names.push(file.name); if (file.name === 'second.png' && fail) throw new Error('controlled upload failure'); });
+});
+
+test('cancelling an upload leaves the dialog and remaining files available for retry', async () => {
+  await uploadFixture(async ({ click }) => {
+    await click('Upload files');
+    await click('Cancel remaining');
+    assert.ok(document.querySelector('.wk-lib-action-dialog'));
+    assert.match(document.querySelector('.wk-lib-upload-queue').textContent, /Upload cancelled.*Queued/);
+  }, async (_input, signal) => new Promise((_resolve, reject) => signal.addEventListener('abort', () => reject(new DOMException('Cancelled', 'AbortError')), { once: true })));
+});
+
 test('shell exposes all destinations, active page, breadcrumbs, disclosure and picture content', () => withDom(async ({ render, settle }) => {
   const destinations = [];
   await render(rootTree({ accountId: 'account-a', path: '/library/pictures', navigate: path => destinations.push(path) }));
   await settle();
   for (let attempts = 0; attempts < 10 && document.querySelectorAll('.wk-lib-card').length === 0; attempts++) await settle(100);
   const nav = document.querySelector('nav[aria-label="Library navigation"]');
-  assert.equal(nav.querySelectorAll('button').length, 8);
+  assert.equal(nav.querySelectorAll('button').length, 7);
   assert.equal(nav.querySelector('[aria-current="page"] span').textContent, 'Pictures');
   assert.match(document.querySelector('h1').textContent, /Pictures/);
   assert.doesNotMatch(document.body.textContent, /Development preview|Sample state/);

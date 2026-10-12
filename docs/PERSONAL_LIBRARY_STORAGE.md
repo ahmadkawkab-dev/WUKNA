@@ -108,6 +108,49 @@ terminal session; cancelling the current file also requests server cancellation.
 ## Compose setup
 
 The opt-in dev/production overrides reuse `compose.library.services.yaml`.
+
+### Host-run development API
+
+For an existing `dotnet watch` API and local PostgreSQL, use the standalone
+`compose.library.host.yaml` instead of moving the application into Docker.
+It reuses the same pinned storage/scanner services, persists files and scanner
+signatures in Docker volumes, and publishes only `127.0.0.1:18333` (private S3)
+and `127.0.0.1:13311` (scanner). SeaweedFS has an additional bridge network
+because Docker does not publish ports from an internal-only network. The
+production overrides retain their private networks with no published ports.
+The host setup also waits for the volume server to register with the master
+before declaring storage healthy, covering the brief registration delay on restart.
+
+```bash
+ops/create-library-storage-config /absolute/private/library-storage
+docker compose --project-name wukna-library-local \
+  --env-file /absolute/private/library-storage/storage.env \
+  -f compose.library.host.yaml up -d --wait --wait-timeout 300
+docker compose --project-name wukna-library-local \
+  --env-file /absolute/private/library-storage/storage.env \
+  -f compose.library.host.yaml exec -T seaweedfs weed shell <<'EOF'
+s3.bucket.create -name wukna-library
+EOF
+ops/configure-local-library-storage /absolute/private/library-storage
+```
+
+Generate credentials and create the bucket on first setup only. The configuration
+helper merges the Library settings into the existing project's .NET user secrets
+through stdin, preserving authentication/database settings and keeping credentials
+out of command arguments and output. It creates a private quarantine directory
+alongside the generated configuration and restricts the secret file to mode 0600.
+Restart the Development API (Ctrl+R in `dotnet watch`) after configuration. Check
+the existing database's Library migrations before use; this setup neither resets
+the database nor applies migrations automatically.
+
+Subsequent starts use the same Compose command and private environment file.
+The containers restart automatically after Docker restarts. Stop them with
+`docker compose ... stop`; do not use `down --volumes` on storage you want to
+keep. Container volumes are persistent storage, not backups; the backup and
+recovery guidance below also applies to local data you want to retain.
+
+### Containerized development and production
+
 SeaweedFS 4.48 is pinned by digest. One `weed server -filer -s3` process provides
 the master, volume, filer and S3 gateway, without unnecessary distributed nodes
 or bundled administrative/Iceberg services. Its persistent `/data` volume holds
@@ -210,6 +253,18 @@ configuration, coordinating the SeaweedFS/API restart and revoking the old key;
 never remove authentication to bypass an outage.
 
 ## Verification status and remaining work
+
+The host-run development setup was configured and verified on October 12, 2026.
+SeaweedFS and ClamAV run under the `wukna-library-local` Compose project with
+private credentials and persistent volumes; the Development API reports storage
+available. Real desktop/mobile browser checks passed code and picture uploads,
+scanned picture thumbnails, escaped code previews, byte-exact downloads, reload
+and storage-restart persistence, anonymous/cross-owner denial, and rejection of
+the harmless EICAR antivirus test signature. The focused storage suite passed
+24 tests with its separate disposable real-storage opt-in skipped. Normal
+background cleanup released all test storage, and four temporary test accounts
+were removed. Local evidence is in ignored `artifacts/library-local-storage/`.
+This local setup does not configure a production deployment or off-host backups.
 
 The default test suite uses controlled storage/scanner fixtures with real
 PostgreSQL to exercise publication, ownership, checksum/content rejection,

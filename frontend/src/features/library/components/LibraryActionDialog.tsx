@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Button } from '../../../components/ui/Button';
+import { X } from 'lucide-react';
+import { Button, IconButton } from '../../../components/ui/Button';
 import { Dialog } from '../../../components/ui/Dialog';
 import { Field } from '../../../components/ui/Field';
-import { libraryErrorMessage } from '../contracts';
-import { documentAccept, pictureAccept } from '../files';
+import { LibraryApiError, libraryErrorMessage } from '../contracts';
+import { documentAccept, libraryFileAccept, libraryFileCategory, pictureAccept } from '../files';
 import { useLibraryCapabilities, useLibraryCollections, useLibraryFolders, useLibraryItem, useLibraryItems, useLibraryMutation } from '../hooks/useLibraryQueries';
 import { categoryNames, LibraryState, PrivateLabel, type LibraryAction, useLibraryUI } from './LibraryUI';
 import type { LibraryApi } from '../api/LibraryApi';
@@ -25,7 +26,7 @@ export function LibraryActionDialog({ action, onClose }: { action: LibraryAction
   const uploadsAvailable = capabilities.data?.storageAvailable === true;
   const allFolders = folders.data?.pages.flatMap(page => page.items) ?? [];
   const allCollections = collections.data?.pages.flatMap(page => page.items) ?? [];
-  const [name, setName] = useState(action.type === 'rename' ? action.item.name : action.type === 'collection' ? action.collection?.name ?? '' : '');
+  const [name, setName] = useState(action.type === 'rename' ? action.item.name : action.type === 'collection' ? action.collection?.name ?? '' : action.type === 'video' ? action.name ?? '' : '');
   const [description, setDescription] = useState(action.type === 'collection' ? action.collection?.description ?? '' : action.type === 'metadata' ? action.item.description ?? '' : '');
   const [tags, setTags] = useState(action.type === 'metadata' ? action.item.tags?.join(', ') ?? '' : '');
   const [notes, setNotes] = useState(action.type === 'metadata' ? action.item.notes ?? '' : '');
@@ -34,14 +35,17 @@ export function LibraryActionDialog({ action, onClose }: { action: LibraryAction
   const [folderId, setFolderId] = useState('folderId' in action ? action.folderId ?? '' : 'parentId' in action ? action.parentId ?? '' : '');
   const [collectionId, setCollectionId] = useState('collectionId' in action ? action.collectionId : '');
   const [target, setTarget] = useState<'folder' | 'collection'>('folder');
-  const [url, setUrl] = useState(''); const [error, setError] = useState('');
-  const [uploads, setUploads] = useState<UploadRow[]>([]); const [uploading, setUploading] = useState(false); const stop = useRef(false);
+  const [url, setUrl] = useState(action.type === 'video' ? action.url ?? '' : ''); const [error, setError] = useState('');
+  const [uploads, setUploads] = useState<UploadRow[]>(action.type === 'upload' ? action.files?.map(file => ({ file, state: 'queued' })) ?? [] : []); const [uploading, setUploading] = useState(false); const stop = useRef(false);
+  const automaticStarted = useRef(false);
   const activeUpload = useRef<AbortController | null>(null);
+  const fileInput = useRef<HTMLInputElement | null>(null);
   useEffect(() => () => { stop.current = true; activeUpload.current?.abort(); }, []);
   const [selected, setSelected] = useState<string[]>([]);
   const candidates = useLibraryItems({ limit: 24 }, action.type === 'addCollectionItems');
   const mutation = useLibraryMutation<(api: LibraryApi, signal: AbortSignal) => Promise<unknown>, unknown>((api, operation, signal) => operation(api, signal));
   const busy = mutation.isPending || uploading;
+  const generalUpload = action.type === 'upload' && !action.category;
   const category: LibraryCategory | undefined = 'category' in action ? action.category : action.type === 'video' ? 'video' : undefined;
   const chooseFolder = <label className="wk-lib-field">{action.type === 'folder' ? 'Parent folder' : 'Folder'}<select aria-label={action.type === 'folder' ? 'Parent folder' : 'Folder'} value={folderId} onChange={event => setFolderId(event.target.value)} disabled={folders.isPending || folders.isError || busy}>
     <option value="">All {category ? categoryNames[category].toLowerCase() : 'items'} / root</option>
@@ -50,7 +54,10 @@ export function LibraryActionDialog({ action, onClose }: { action: LibraryAction
   const save = async (operation: (api: LibraryApi, signal: AbortSignal) => Promise<unknown>, message: string) => {
     setError('');
     try { await mutation.mutateAsync(operation); notify(message); onClose(); }
-    catch (failure) { setError(libraryErrorMessage(failure)); }
+    catch (failure) {
+      if (action.type === 'video' && action.autoStart && failure instanceof LibraryApiError && failure.code === 'library_video_duplicate') { notify('This video is already saved in your Library.'); onClose(); }
+      else setError(libraryErrorMessage(failure));
+    }
   };
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -74,6 +81,8 @@ export function LibraryActionDialog({ action, onClose }: { action: LibraryAction
   };
   const upload = async () => {
     if (action.type !== 'upload' || !uploadsAvailable) return;
+    const pendingCount = uploads.filter(row => row.state !== 'complete').length;
+    if (!pendingCount) return;
     setUploading(true); setError(''); stop.current = false; let complete = 0;
     for (let index = 0; index < uploads.length; index++) {
       if (stop.current) break;
@@ -81,7 +90,7 @@ export function LibraryActionDialog({ action, onClose }: { action: LibraryAction
       const file = uploads[index].file;
       const controller = new AbortController(); activeUpload.current = controller;
       setUploads(rows => rows.map((row, i) => i === index ? { ...row, state: 'saving', error: undefined } : row));
-      try { await mutation.mutateAsync((api, signal) => api.addFile({ file, category: action.category, folderId: folderId || null,
+      try { await mutation.mutateAsync((api, signal) => api.addFile({ file, category: action.category ?? libraryFileCategory(file), folderId: generalUpload ? null : folderId || null,
         onProgress: stage => setUploads(rows => rows.map((row, i) => i === index ? { ...row, stage } : row)) },
         AbortSignal.any([signal, controller.signal])));
         complete++; setUploads(rows => rows.map((row, i) => i === index ? { ...row, state: 'complete' } : row)); }
@@ -89,10 +98,22 @@ export function LibraryActionDialog({ action, onClose }: { action: LibraryAction
       finally { activeUpload.current = null; }
     }
     setUploading(false); if (complete) notify(`${complete} file${complete === 1 ? '' : 's'} saved to Library.`);
+    if (!stop.current && complete === pendingCount) onClose();
   };
   const destructive = ['delete', 'deleteCollection', 'deleteFolder'].includes(action.type);
+  useEffect(() => {
+    if (!(action.type === 'upload' || action.type === 'video') || !action.autoStart || automaticStarted.current || busy) return;
+    if (action.type === 'upload' && (!uploadsAvailable || folders.isPending || folders.isError)) return;
+    // Scheduling avoids starting a write in StrictMode's discarded effect setup.
+    const timer = window.setTimeout(() => {
+      automaticStarted.current = true;
+      if (action.type === 'upload') void upload();
+      else void save((api, signal) => api.addVideo({ name, description: null, folderId: folderId || null, url }, signal), 'Video link saved.');
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [action, busy, uploadsAvailable, folders.isPending, folders.isError, upload, save, name, folderId, url]);
   const requiresName = ['folder', 'collection', 'rename', 'video'].includes(action.type);
-  const confirmDisabled = action.type === 'upload' ? !uploadsAvailable || !uploads.some(row => row.state !== 'complete') || folders.isPending || folders.isError :
+  const confirmDisabled = action.type === 'upload' ? !uploadsAvailable || !uploads.some(row => row.state !== 'complete') || !generalUpload && (folders.isPending || folders.isError) :
     action.type === 'organize' ? target === 'collection' ? !collectionId || collections.isError || collections.isPending : !category || folders.isError || folders.isPending :
       action.type === 'addCollectionItems' ? !selected.length : false;
   return <Dialog title={titles[action.type]} onClose={onClose} busy={busy} urgent={destructive} className="wk-lib-action-dialog">
@@ -107,7 +128,7 @@ export function LibraryActionDialog({ action, onClose }: { action: LibraryAction
       {action.type === 'organize' && <fieldset className="wk-lib-field"><legend>Destination</legend>
         <label><input type="radio" name="destination" checked={target === 'folder'} disabled={!category || busy} onChange={() => setTarget('folder')} /> Move to folder{!category && ' (select one file category)'}</label>
         <label><input type="radio" name="destination" checked={target === 'collection'} disabled={busy} onChange={() => setTarget('collection')} /> Add to collection</label></fieldset>}
-      {['upload', 'folder', 'video'].includes(action.type) || action.type === 'organize' && target === 'folder' ? <>{chooseFolder}
+      {(['upload', 'folder', 'video'].includes(action.type) && !generalUpload) || (action.type === 'organize' && target === 'folder') ? <>{chooseFolder}
         {folders.isError && <p role="alert">Could not load folders. <Button variant="quiet" onClick={() => void folders.refetch()}>Retry folders</Button></p>}
         {folders.hasNextPage && <Button variant="quiet" loading={folders.isFetchingNextPage} onClick={() => void folders.fetchNextPage()}>Load more folders</Button>}</> : null}
       {action.type === 'organize' && target === 'collection' && <><label className="wk-lib-field">Collection<select aria-label="Collection" value={collectionId} onChange={event => setCollectionId(event.target.value)} disabled={busy}>
@@ -117,10 +138,16 @@ export function LibraryActionDialog({ action, onClose }: { action: LibraryAction
       {action.type === 'upload' && <><LibraryState pending={capabilities.isPending} error={capabilities.error} retry={() => void capabilities.refetch()} />
         {!uploadsAvailable && !capabilities.isPending && <p role="status">File storage is unavailable. Try again later.</p>}
         <label className="wk-lib-dropzone" onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); if (!busy && uploadsAvailable) chooseFiles(Array.from(event.dataTransfer.files)); }}>
-        <strong>Drop files here or choose files</strong><span>{action.category === 'picture' ? 'JPG, PNG, WebP' : 'PDF, DOCX, XLSX, Markdown, code & text'} · Up to 20 MB per file</span>
-        <input aria-label="Choose Library files" type="file" multiple disabled={busy || !uploadsAvailable} accept={action.category === 'picture' ? pictureAccept : documentAccept} onChange={event => { chooseFiles(Array.from(event.target.files ?? [])); event.target.value = ''; }} /></label>
+        <strong>Drop files here or choose files</strong><span>{generalUpload ? 'JPG, PNG, WebP, PDF, DOCX, XLSX, Markdown, code & text' : action.category === 'picture' ? 'JPG, PNG, WebP' : 'PDF, DOCX, XLSX, Markdown, code & text'} · Up to 20 MB per file</span>
+        <input ref={fileInput} aria-label="Choose Library files" type="file" multiple disabled={busy || !uploadsAvailable} accept={generalUpload ? libraryFileAccept : action.category === 'picture' ? pictureAccept : documentAccept} onChange={event => { chooseFiles(Array.from(event.target.files ?? [])); event.target.value = ''; }} /></label>
+        {generalUpload && <p>Pictures are saved to Pictures. Documents and code files are saved to Documents. Use those sections to choose a folder.</p>}
         <p>Code and text files: up to 256 KB. Files become available after validation and security checks.</p>
-        <ul className="wk-lib-upload-queue" aria-live="polite">{uploads.map((row, index) => <li key={`${index}-${row.file.name}`}><strong>{row.file.name}</strong><span>{row.state === 'saving' ? row.stage === 'checking' ? 'Checking file…' : row.stage === 'confirming' ? 'Confirming saved file…' : 'Uploading and checking…' : row.state === 'complete' ? 'Added' : row.state === 'failed' ? row.error : 'Queued'}</span>{row.state === 'saving' && <progress aria-label={`Uploading ${row.file.name}`} />}</li>)}</ul>
+        <ul className="wk-lib-upload-queue" aria-live="polite">{uploads.map((row, index) => <li key={`${index}-${row.file.name}`}>
+          <div className="wk-lib-upload-copy"><strong>{row.file.name}</strong><span>{row.state === 'saving' ? row.stage === 'checking' ? 'Checking file…' : row.stage === 'confirming' ? 'Confirming saved file…' : 'Uploading and checking…' : row.state === 'complete' ? 'Added' : row.state === 'failed' ? row.error : 'Queued'}</span>{row.state === 'saving' && <progress aria-label={`Uploading ${row.file.name}`} />}</div>
+          {(row.state === 'queued' || row.state === 'failed') && <IconButton label={`Remove ${row.file.name} from queue`} disabled={busy} onClick={() => {
+            setUploads(rows => rows.filter((_, i) => i !== index)); fileInput.current?.focus();
+          }}><X size={16} aria-hidden="true" /></IconButton>}
+        </li>)}</ul>
         {uploading && <Button variant="secondary" onClick={() => { stop.current = true; activeUpload.current?.abort(); }}>Cancel remaining</Button>}</>}
       {action.type === 'addCollectionItems' && <><LibraryState pending={candidates.isPending} error={candidates.error} retry={() => void candidates.refetch()} empty={candidates.data?.pages[0].items.length === 0} />
         <div className="wk-lib-choices">{candidates.data?.pages.flatMap(page => page.items).map(item => <label key={item.id}><input type="checkbox" disabled={busy || !selected.includes(item.id) && selected.length >= 100} checked={selected.includes(item.id)} onChange={() => setSelected(ids => ids.includes(item.id) ? ids.filter(id => id !== item.id) : ids.length < 100 ? [...ids, item.id] : ids)} />{item.name}</label>)}</div>

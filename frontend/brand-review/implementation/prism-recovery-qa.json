@@ -1,0 +1,45 @@
+{
+  "syntheticApi": true,
+  "records": [
+    {
+      "failure": "server-503",
+      "reason": "Could not restore your session\n\nWukna had a server error. Try again shortly.",
+      "cycles": {
+        "folds": 2,
+        "returns": 1,
+        "folded": true
+      },
+      "retry": "failed retry retains loop; successful retry immediately opens workspace",
+      "themes": "eight distinct faces in light and dark",
+      "mobile": "centered with no overflow",
+      "reducedMotion": "static canonical W"
+    },
+    {
+      "failure": "network-offline",
+      "reason": "Could not restore your session\n\nCould not connect to Wukna. Try again.",
+      "cycles": {
+        "folds": 2,
+        "returns": 1,
+        "folded": true
+      },
+      "retry": "failed retry retains loop; successful retry immediately opens workspace",
+      "themes": "eight distinct faces in light and dark",
+      "mobile": "centered with no overflow",
+      "reducedMotion": "static canonical W"
+    },
+    {
+      "failure": "csrf-server-503",
+      "reason": "Could not restore your session\n\nWukna had a server error. Try again shortly.",
+      "cycles": {
+        "folds": 2,
+        "returns": 1,
+        "folded": true
+      },
+      "retry": "failed retry retains loop; successful retry immediately opens workspace",
+      "themes": "eight distinct faces in light and dark",
+      "mobile": "centered with no overflow",
+      "reducedMotion": "static canonical W"
+    }
+  ],
+  "browserErrors": []
+}

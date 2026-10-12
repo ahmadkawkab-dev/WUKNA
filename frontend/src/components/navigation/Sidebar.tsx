@@ -12,6 +12,8 @@ import { useReplayTour } from "../../features/onboarding/OnboardingProvider";
 import { Dialog } from "../ui/Dialog";
 import { boardCardTone } from '../../features/boards/boardCardTone';
 import { isLibraryPath } from '../../features/library/libraryRoutes';
+import { BrandMark } from '../brand/BrandMark';
+import { SearchInput } from '../ui/SearchInput';
 
 export function Sidebar({
   user, boards, activeBoardId, collapsed, onToggle, navigate, onCreateBoard,
@@ -129,8 +131,8 @@ export function Sidebar({
   return <aside className={`wk-sidebar${collapsed ? " wk-sidebar--collapsed" : ""}`}>
     <div className="wk-sidebar-header">
       <button className="wk-sidebar-brand" onClick={() => navigate("/home")} aria-label="Wukna home">
-        <span className="wk-sidebar-monogram" aria-hidden="true">W</span>
-        <span className="wk-sidebar-brand-copy"><strong>Wukna</strong><small>Personal workspace</small></span>
+        <BrandMark motion="welcome" />
+        <span className="wk-sidebar-brand-copy"><strong>wukna</strong><small>Personal workspace</small></span>
       </button>
       <IconButton label={collapsed ? "Expand sidebar" : "Collapse sidebar"} aria-expanded={!collapsed} onClick={onToggle}>
         {collapsed ? <PanelLeftOpen size={17} aria-hidden="true" /> : <PanelLeftClose size={17} aria-hidden="true" />}
@@ -139,10 +141,10 @@ export function Sidebar({
 
     <div className="wk-sidebar-utilities">
       <Button className="wk-sidebar-new" size="compact" aria-label="New board" title={collapsed ? 'New board' : undefined} onClick={() => setCreating(true)}><Plus size={15} aria-hidden="true" /><span>New board</span></Button>
-      <label className="wk-sidebar-search">
+      <div className="wk-sidebar-search">
         <Search size={14} aria-hidden="true" />
-        <input ref={searchRef} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search boards" aria-label="Search boards" />
-      </label>
+        <SearchInput ref={searchRef} value={search} onValueChange={setSearch} clearLabel="Clear board search" placeholder="Search boards" aria-label="Search boards" />
+      </div>
     </div>
 
     <nav data-tour="navigation" className="wk-sidebar-nav" aria-label="Primary navigation">

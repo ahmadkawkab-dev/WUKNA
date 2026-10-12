@@ -87,7 +87,7 @@ try {
   await page.getByRole('button', { name: 'Delete collection', exact: true }).click(); await page.locator('.wk-lib-action-dialog').getByRole('button', { name: 'Delete', exact: true }).click();
   await page.locator('.wk-lib-action-dialog').waitFor({ state: 'hidden' });
   await go('/library/favorites'); await page.getByRole('button', { name: /^Renamed reference/ }).waitFor();
-  await go('/library/search'); await page.getByLabel('Search Library', { exact: true }).fill('Renamed reference'); await page.getByRole('button', { name: 'Search', exact: true }).click(); await page.getByRole('button', { name: /^Renamed reference/ }).waitFor();
+  await go('/library'); await page.getByLabel('Search your library', { exact: true }).fill('Renamed reference'); await page.getByRole('button', { name: 'Search', exact: true }).click(); await page.getByRole('button', { name: /^Renamed reference/ }).waitFor();
   const list = await (await owner.api.get('/api/library/items?category=video', { headers: owner.headers })).json(); const id = list.items[0].id;
   const foreign = await other.api.get(`/api/library/items/${id}`, { headers: other.headers }); assert.equal(foreign.status(), 404);
   const foreignWrite = await other.api.patch(`/api/library/items/${id}`, { headers: other.headers, data: { name: 'Forbidden' } }); assert.equal(foreignWrite.status(), 404);

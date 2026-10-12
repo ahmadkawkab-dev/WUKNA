@@ -42,14 +42,15 @@ export function useLibraryMutation<T, R = void>(operation: (api: LibraryApi, inp
   },
     onSuccess: async () => {
       // Mutations invalidate opaque pagination cursors. Restart lists at page one.
-      await client.cancelQueries({ queryKey: ['library', accountId] });
+      await client.cancelQueries({ queryKey: ['library', accountId], predicate: query => query.queryKey[2] !== 'blob' || query.queryKey[3] !== 'thumbnail' });
       await Promise.all([
         client.resetQueries({ queryKey: ['library', accountId, 'items'] }),
         client.resetQueries({ queryKey: ['library', accountId, 'folders'] }),
         client.resetQueries({ queryKey: ['library', accountId, 'collections'] }),
       ]);
       await client.invalidateQueries({ queryKey: ['library', accountId],
-        predicate: query => !['items', 'folders', 'collections'].includes(String(query.queryKey[2])) });
+        predicate: query => !['items', 'folders', 'collections'].includes(String(query.queryKey[2])) &&
+            !(query.queryKey[2] === 'blob' && query.queryKey[3] === 'thumbnail') });
     } });
 }
 export function useLibraryItem(id: string | null) {

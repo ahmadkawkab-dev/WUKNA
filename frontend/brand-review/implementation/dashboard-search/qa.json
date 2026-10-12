@@ -1,0 +1,25 @@
+{
+  "records": [
+    {
+      "width": 1440,
+      "search": "dashboard results; one header field",
+      "filters": "Documents query preserved",
+      "clear": "overview restored; input focused",
+      "history": "Back and reload restore term",
+      "recent": "all recent in dashboard",
+      "legacy": "old search URL shows Dashboard",
+      "otherSection": "header search opens dashboard results"
+    },
+    {
+      "width": 375,
+      "search": "dashboard results; one header field",
+      "filters": "Documents query preserved",
+      "clear": "overview restored; input focused",
+      "history": "Back and reload restore term",
+      "recent": "all recent in dashboard",
+      "legacy": "old search URL shows Dashboard",
+      "otherSection": "header search opens dashboard results"
+    }
+  ],
+  "browserErrors": []
+}

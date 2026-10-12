@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Boxes, Plus, Search, Sparkles } from "lucide-react";
 import { errorMessage, planningSettingsApi, taskTemplateApi, type TaskTemplateDto } from "../../api";
 import { Button } from "../../components/ui/Button";
+import { SearchInput } from '../../components/ui/SearchInput';
 import { dateInZone } from "../../date";
 import { TemplatesDialog } from "./TemplatesDialog";
 import "./templates-page.css";
@@ -77,8 +78,8 @@ export function TemplatesPage({ notify, navigate }: { notify: (message: string) 
       <div><span className="wk-templates-eyebrow">Reusable task systems</span><h1 id="wk-templates-title">Templates</h1><p>Start with structure, then make it yours.</p></div>
       <Button aria-haspopup="dialog" onClick={() => setDialogTarget("new")}><Plus size={18} aria-hidden="true" /> Create template</Button>
     </header>
-    <div className="wk-templates-toolbar"><label><Search size={15} aria-hidden="true" /><input value={search}
-      onChange={(event) => setSearch(event.target.value)} placeholder="Search templates" aria-label="Search templates" /></label></div>
+    <div className="wk-templates-toolbar"><div className="wk-templates-search"><Search size={15} aria-hidden="true" /><SearchInput value={search}
+      onValueChange={setSearch} clearLabel="Clear templates search" placeholder="Search templates" aria-label="Search templates" /></div></div>
     {error && <div className="wk-templates-error" role="alert"><p>{error}</p><Button variant="secondary" size="compact" onClick={() => void load()}>Try again</Button></div>}
     {loading && <LoadingSkeleton layout="cards" label="Loading templates…" />}
     {!loading && !error && <div className="wk-templates-layout">
