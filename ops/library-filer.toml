@@ -1,0 +1,4 @@
+# Explicitly retain S3 namespace/metadata alongside the volume/master files.
+[leveldb2]
+enabled = true
+dir = "/data/filer"

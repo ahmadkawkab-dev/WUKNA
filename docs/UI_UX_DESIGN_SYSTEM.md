@@ -52,9 +52,26 @@ Common actions stay visible or immediately reachable. Rare actions may use inspe
 
 ### Primary navigation
 
-The signed-in shell's primary destinations are Boards, Tasks, and Calendar. Account is reached through the persistent identity control: the desktop sidebar account row or mobile header avatar. Upcoming Library, Pictures, and Journal routes remain valid for direct links and development previews but do not compete with working destinations in primary navigation. A destination only joins primary navigation when it supports a meaningful workflow.
+The signed-in shell's primary destinations are Home, Boards, Library, Week, Calendar, Quick tasks, Templates, and Notifications, in that order. Account is reached through the persistent identity control: the desktop sidebar account row or mobile header avatar. Journal remains an upcoming feature. A destination only joins primary navigation when it supports a meaningful workflow.
 
 The October 4 implementation and browser evidence are recorded in [the refactor audit](UI_UX_REFACTOR_AUDIT.md).
+
+The Personal Library uses authenticated backend metadata and private SeaweedFS
+storage in development and production. Library appears in the desktop sidebar and mobile More
+menu, immediately after Boards. Notifications must always remain the last
+destination in both navigation lists; preserve this rule when adding features.
+Code files belong to Documents and use a code viewer; do not add a separate
+Code Snippets destination. Its nested navigation uses the existing semantic
+tokens, accessible current page indicators, and shell focus behavior. Dashboard,
+Pictures, Documents, Videos, Collections, Favorites, Trash, Search, and Storage
+have functional frontend views. Uploads, folders, collection membership,
+favorites, metadata, and Trash actions persist through the authenticated HTTP
+adapter. Switching accounts disposes the account's query cache. There are no
+Library sample scenarios, mock adapters, or demo media. The account ceiling is
+1 GB; sharing and checkout are unavailable.
+The user approved filling incomplete Canva layouts with repository conventions.
+See [the current frontend record](PERSONAL_LIBRARY_FRONTEND.md) and
+[the earlier inspection and checkpoint history](PERSONAL_LIBRARY_PLAN.md).
 
 ## Semantic tokens
 
@@ -185,6 +202,8 @@ Use the shared `Button` and `IconButton` primitives.
 
 Default and touch controls target 44px. Compact desktop controls use 36px; densely repeated calendar cells may use 24–32px with spacing. Icons remain 16–20px inside these targets. The shared `loading` state disables duplicate submission, hides the original content visually, and reserves the maximum of the original and optional `loadingLabel` width from the first render. Short controls use a spinner with a screen-reader label; do not render a long default loading label into a short Add button.
 
+Action feedback uses the shared 120ms color, border, and shadow transitions without changing control dimensions. Hover rules require `@media (hover: hover)` so touch taps do not leave a hover highlight. Pressed feedback lasts only while the action is pressed. Current destinations, selected views, and enabled filters keep their explicit selected state. Reduced-motion preferences remove these transitions.
+
 ### Inputs
 
 Inputs have persistent labels, tokenized borders and surfaces, 14px compact desktop text or 16px editor text, visible invalid state, and visible keyboard focus. Touch/narrow input text is at least 16px, including dense feature forms, to avoid browser zoom on focus. Placeholder text is supplemental, not a label. Required shared fields include a visible hint; associated errors are announced. Authentication supports paste/autofill and a password disclosure control. Read-only information stays selectable.
@@ -203,7 +222,7 @@ Desktop inspectors and secondary panels use grouped sections. Board Properties o
 
 ### Focus
 
-Every interactive element has a persistent `:focus-visible` indicator with sufficient contrast on paper, pigments, selected states, and dark surfaces. Never apply `outline: none` or `outline: 0` without a verified replacement. Sticky headers, panels, sheets, and overlays must not obscure focused controls.
+Every interactive element has a visible keyboard `:focus-visible` indicator with sufficient contrast on paper, pigments, selected states, and dark surfaces. Buttons and native selects use one inset ring that stays within the control bounds. Input modality is tracked before action handlers run: pointer actions suppress lingering action rings after a native select closes or a dialog restores focus, while keyboard input restores the indicator. DOM focus and editable-field focus remain intact. An open native select retains its transient ring. Never apply `outline: none` or `outline: 0` without a verified replacement. Sticky headers, panels, sheets, and overlays must not obscure focused controls.
 
 ## Board and canvas language
 
@@ -461,9 +480,26 @@ The initial personal Tasks page uses the signed-in shell, shared controls, and s
 
 These patterns define the visual and interaction language for planned features. Product boundaries, status, deferred capabilities, and implementation dependencies live in [FUTURE_FEATURES.md](FUTURE_FEATURES.md). These UI specifications represent planned features and must not be treated as proof of implemented persistence, integrations, upload, or synchronization.
 
-All three surfaces retain Instrument Sans for application controls, Wukna semantic tokens, the 4px spacing scale, existing radii and focus treatment, and the page order of heading → primary tabs → contextual controls → content. The pages have distinct content rhythms while sharing search field spacing, clear behavior, navigation, state language, and responsive behavior. Production uses honest coming-soon pages; `/dev/library`, `/dev/journal`, and `/dev/pictures` use clearly labeled local fixtures for review.
+All three surfaces retain Instrument Sans for application controls, Wukna semantic tokens, the 4px spacing scale, existing radii and focus treatment, and the page order of heading → primary tabs → contextual controls → content. The pages have distinct content rhythms while sharing search field spacing, clear behavior, navigation, state language, and responsive behavior. Library uses real account data; Journal has an honest coming-soon page and a separate `/dev/journal` preview.
 
 ### Library
+
+Library follows Boards in global navigation. Its section links and collection
+shortcuts expand inside the persistent workspace sidebar; mobile uses an
+accessible Library sections disclosure. Retain existing
+section names. Notifications is the last primary destination. Storage remains a
+separate workspace utility directly below Notifications across workspace pages,
+including collapsed navigation and mobile More. Code files belong to Documents.
+Once opened, the section list stays open across workspace destinations until
+Library is clicked again. Closing it preserves the current page and selection.
+Its disclosure arrow and `aria-expanded` communicate whether the list is open.
+Intrinsic-height, opacity, and arrow motion use shared motion/easing tokens;
+reduced-motion preferences remove transitions. Closed links are inert. Mobile
+sections remain open across Library pages, with explicit toggle and Escape support.
+All Library sections share heading/description structure, gutters, control
+wrapping, and empty-state surfaces. The dashboard has one capture action area
+and one initial empty state; populated Favorites and Collections form secondary
+sections. Avoid duplicate Quick Capture, privacy panels, and empty content panels.
 
 Library collects material saved from elsewhere. A saved card leads with media, then source and type, title, creator, and saved date. `source` and `type` remain separate concepts: YouTube plus Short, for example. Provider identity stays in small metadata, never a provider-colored page. Standard video uses a wide thumbnail, short video uses a vertical thumbnail, and article or post previews may use flexible image and text proportions. Grid supports visual browsing; list supports title and metadata scanning. Collections are flat, flexible groups with preview mosaics, not a folder hierarchy. The detail surface docks on the right on desktop and becomes a full-width sheet on mobile. Search can eventually span title, caption, creator, source, collection, and tags; source, media type, collection, and date filters should remain restrained.
 

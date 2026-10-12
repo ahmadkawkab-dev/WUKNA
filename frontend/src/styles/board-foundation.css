@@ -122,7 +122,7 @@
   will-change: auto;
   transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
 }
-.sticky-note:hover { transform: none; box-shadow: 0 4px 14px color-mix(in srgb, var(--note-foreground) 14%, transparent); }
+@media (hover: hover) { .sticky-note:hover { transform: none; box-shadow: 0 4px 14px color-mix(in srgb, var(--note-foreground) 14%, transparent); } }
 .sticky-note.selected {
   border-color: var(--focus);
   box-shadow: 0 0 0 1px var(--focus), var(--shadow-selected);
@@ -176,13 +176,13 @@
 .note-drag-grip:active { cursor: grabbing; }
 .note-type { display: grid; place-items: center; width: 1rem; height: 2rem; flex: none; color: inherit; opacity: .65; }
 .sticky-note .note-properties { width: 2rem; min-width: 2rem; height: 2rem; min-height: 2rem; padding: 0; flex: none; margin: 0; color: inherit; }
-.sticky-note .note-properties:hover:not(:disabled) { background: color-mix(in srgb, var(--note-foreground) 8%, transparent); }
+@media (hover: hover) { .sticky-note .note-properties:hover:not(:disabled) { background: color-mix(in srgb, var(--note-foreground) 8%, transparent); } }
 .sticky-note .note-properties:disabled { color: var(--muted-foreground); }
 .note-title-text { display: block; min-height: 1.5rem; line-height: 1.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .note-title-text.is-placeholder, .note-body-text.is-placeholder { opacity: 1; }
 .sticky-note input::placeholder, .sticky-note textarea::placeholder { color: var(--note-foreground); }
 .sticky-note .editable-text { border-radius: 2px; }
-.sticky-note .editable-text:hover { background: color-mix(in srgb, var(--note-foreground) 4%, transparent); text-decoration: none; }
+@media (hover: hover) { .sticky-note .editable-text:hover { background: color-mix(in srgb, var(--note-foreground) 4%, transparent); text-decoration: none; } }
 .sticky-note .inline-edit {
   width: 100%; min-height: 0; margin: 0; padding: 0; border: 0; border-radius: 2px;
   color: inherit; background: transparent; font: inherit; letter-spacing: inherit; box-shadow: none;
@@ -190,11 +190,12 @@
 .sticky-note .inline-edit--title { height: 1.5rem; line-height: 1.5rem; }
 .sticky-note .inline-edit:focus-visible { outline: 1px solid color-mix(in srgb, var(--note-foreground) 45%, transparent); outline-offset: 2px; box-shadow: none; }
 .note-body { min-height: 0; flex: 1; margin-block-start: var(--space-2); overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; font-size: .9375rem; line-height: 1.6; }
-.note-body-text.editable-text:hover { background: transparent; cursor: text; }
+@media (hover: hover) { .note-body-text.editable-text:hover { background: transparent; cursor: text; } }
 .note-body-text { display: block; min-height: 100%; padding: 0; color: inherit; line-height: inherit; white-space: pre-wrap; overflow-wrap: anywhere; }
 .sticky-note .inline-edit--content { display: block; height: 100%; min-height: 0; resize: none; line-height: inherit; }
 .note-properties, .note-drag-grip, .resize-handle, .connection-source { opacity: 0; transition: opacity var(--motion-fast); }
-.sticky-note:is(:hover, :focus-within, .selected) :is(.note-properties, .note-drag-grip, .resize-handle, .connection-source) { opacity: 1; }
+.sticky-note:is(:focus-within, .selected) :is(.note-properties, .note-drag-grip, .resize-handle, .connection-source) { opacity: 1; }
+@media (hover: hover) { .sticky-note:is(:hover, :focus-within, .selected) :is(.note-properties, .note-drag-grip, .resize-handle, .connection-source) { opacity: 1; } }
 .sticky-note:is(.is-dragging, .is-resizing) { box-shadow: 0 6px 18px color-mix(in srgb, var(--note-foreground) 16%, transparent); }
 .sticky-note.is-dragging { cursor: grabbing; }
 .sticky-note.is-draft { border-style: dashed; }
@@ -212,9 +213,10 @@
 .checklist-row > .inline-edit { flex: 1; min-width: 0; }
 .checklist-row.checked > .editable-text { color: inherit; opacity: 1; text-decoration: line-through; }
 .checklist-row .task-action { opacity: 0; }
-.checklist-row:is(:hover, :focus-within) .task-action, .checklist-confirm .task-action { opacity: 1; }
+.checklist-row:is(:focus-within) .task-action, .checklist-confirm .task-action { opacity: 1; }
+@media (hover: hover) { .checklist-row:is(:hover, :focus-within) .task-action, .checklist-confirm .task-action { opacity: 1; } }
 .wk-checkbox-target { width: 2.5rem; height: 2.5rem; display: grid; place-items: center; flex: none; cursor: pointer; border-radius: var(--radius-control); }
-.wk-checkbox-target:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
+@media (hover: hover) { .wk-checkbox-target:hover { background: color-mix(in srgb, currentColor 6%, transparent); } }
 .sticky-note .checklist-row input[type='checkbox'] { width: 1rem; height: 1rem; accent-color: var(--note-foreground); }
 .wk-checkbox-target:has(input:focus-visible) { outline: var(--focus-width) solid var(--focus); outline-offset: var(--focus-offset); }
 .wk-checkbox-target input:focus-visible { outline: none; box-shadow: none; }
@@ -223,7 +225,7 @@
 .task-entry, .task-footer { flex: none; }
 .add-task, .task-action { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-1); min-height: 2rem; min-width: 2rem; padding: var(--space-1); border: 0; border-radius: var(--radius-control); color: inherit; background: transparent; font-size: .875rem; }
 .add-task { justify-content: flex-start; }
-.add-task:hover, .task-action:hover { background: color-mix(in srgb, var(--note-foreground) 6%, transparent); text-decoration: none; }
+@media (hover: hover) { .add-task:hover, .task-action:hover { background: color-mix(in srgb, var(--note-foreground) 6%, transparent); text-decoration: none; } }
 .sticky-note .new-item-input { height: 2rem; font-size: .875rem; line-height: 1.5; }
 .task-action.danger { color: var(--note-destructive, var(--destructive)); }
 .task-footer { display: grid; gap: var(--space-1); }
@@ -248,7 +250,8 @@
 .connection-handle[data-connection-side='left']::before { translate: -100% -50%; width: min(calc(44px / var(--board-zoom, 1)), var(--connection-hit-reach, 100000px)); }
 /* Hidden connection targets must not intercept text on neighboring cards. */
 .sticky-note .connection-source { pointer-events: none; }
-.sticky-note:is(:hover, :focus-within, .selected, .is-connection-target) .connection-source { pointer-events: auto; }
+.sticky-note:is(:focus-within, .selected, .is-connection-target) .connection-source { pointer-events: auto; }
+@media (hover: hover) { .sticky-note:is(:hover, :focus-within, .selected, .is-connection-target) .connection-source { pointer-events: auto; } }
 .sticky-note.is-connection-target .connection-source { opacity: .65; }
 .sticky-note .connection-source.highlighted { opacity: 1; background: var(--focus); box-shadow: 0 0 0 1px var(--focus); }
 .connection-endpoint { opacity: 1; background: var(--focus); border-color: var(--canvas); }
@@ -261,7 +264,7 @@
 .connections .connection-hit:focus-visible { outline: none; stroke: color-mix(in srgb, var(--focus) 18%, transparent); }
 .resize-handle { right: 0; bottom: 0; width: 1.5rem; height: 1.5rem; border: 0; border-radius: var(--radius-control); }
 .resize-handle::before { content: ''; position: absolute; left: 50%; top: 50%; width: max(100%, calc(44px / var(--board-zoom, 1))); height: max(100%, calc(44px / var(--board-zoom, 1))); }
-.resize-handle:hover { background: color-mix(in srgb, var(--note-foreground) 6%, transparent); }
+@media (hover: hover) { .resize-handle:hover { background: color-mix(in srgb, var(--note-foreground) 6%, transparent); } }
 @media (hover: none) { .note-properties, .resize-handle, .checklist-row .task-action { opacity: .65; } }
 
 .remote-cursors { z-index: var(--layer-collaboration); }
@@ -314,12 +317,13 @@
 .wk-member-menu > strong { padding: var(--space-2) var(--space-3) 0; font-size: var(--text-control); }
 .wk-member-menu-label { padding: var(--space-2) var(--space-3) 0; color: var(--muted-foreground); font-size: var(--text-meta); }
 .wk-member-menu > button { min-height: var(--target-size); display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border: 0; border-radius: var(--radius-control); color: var(--foreground); background: transparent; text-align: start; }
-.wk-member-menu > button:hover, .wk-member-menu > button[aria-checked='true'] { background: var(--selected); }
+.wk-member-menu > button[aria-checked='true'] { background: var(--selected); }
+@media (hover: hover) { .wk-member-menu > button:hover, .wk-member-menu > button[aria-checked='true'] { background: var(--selected); } }
 .wk-member-menu > button:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: calc(var(--focus-offset) * -1); }
 .wk-member-menu > button > span { width: 1rem; flex: none; font-weight: 700; }
 .wk-member-menu-rule { height: 1px; margin-block: var(--space-1); background: var(--border); }
 .wk-member-menu > .wk-member-menu-danger { color: var(--destructive); }
-.wk-member-menu > .wk-member-menu-danger:hover { background: var(--status-danger-surface); }
+@media (hover: hover) { .wk-member-menu > .wk-member-menu-danger:hover { background: var(--status-danger-surface); } }
 .wk-member-menu .wk-alert { margin: var(--space-2) 0 0; }
 @media (max-width: 700px) {
   .wk-member-menu { inset: auto var(--space-4) calc(4.75rem + env(safe-area-inset-bottom)) !important; width: auto; max-height: min(28rem, calc(100dvh - 7rem)); }

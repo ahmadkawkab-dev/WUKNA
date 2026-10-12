@@ -22,6 +22,7 @@ public class WuknaWebApplicationFactory(
         // realtime tests explicitly enable polling or drive the dispatcher.
         builder.UseSetting("Chat:Outbox:Enabled", "false");
         builder.UseSetting("Notifications:WorkerEnabled", "false");
+        builder.UseSetting("Library:ReservationCleanupEnabled", "false");
         builder.UseSetting("Jwt:Issuer", JwtIssuer);
         builder.UseSetting("Jwt:Audience", JwtAudience);
         builder.UseSetting("Jwt:SigningKey", JwtSigningKey);

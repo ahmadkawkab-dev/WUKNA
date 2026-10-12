@@ -1,7 +1,7 @@
 import { TourHelpIcon } from "../../features/onboarding/TourHelpIcon";
 import { notificationUnread, subscribeNotificationUnread, chatUnreadCounts } from "../../features/notifications/notificationState";
-import { useSyncExternalStore, useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type MouseEvent } from "react";
-import { Bell, Boxes, CalendarDays, CheckSquare, Home, Inbox, LayoutDashboard, PanelLeftClose, PanelLeftOpen, Plus, Search } from "lucide-react";
+import { Fragment, useSyncExternalStore, useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
+import { Bell, BookOpen, Boxes, CalendarDays, CheckSquare, ChevronDown, Home, Inbox, LayoutDashboard, PanelLeftClose, PanelLeftOpen, Plus, Search } from "lucide-react";
 import type { BoardListItemDto } from "../../api";
 import { errorMessage } from "../../api";
 import type { AuthSession } from "../../auth";
@@ -11,10 +11,14 @@ import { Button, IconButton } from "../ui/Button";
 import { useReplayTour } from "../../features/onboarding/OnboardingProvider";
 import { Dialog } from "../ui/Dialog";
 import { boardCardTone } from '../../features/boards/boardCardTone';
+import { isLibraryPath } from '../../features/library/libraryRoutes';
 
 export function Sidebar({
   user, boards, activeBoardId, collapsed, onToggle, navigate, onCreateBoard,
   onRenameBoard, onDeleteBoard, onColorBoard, onOpenAccount,
+  libraryEnabled = false,
+  libraryNavigation,
+  libraryStorage,
 }: {
   user: AuthSession["user"];
   boards: BoardListItemDto[];
@@ -27,6 +31,9 @@ export function Sidebar({
   onDeleteBoard: (id: string) => Promise<void>;
   onColorBoard: (id: string, color: BoardListItemDto['cardColor'], version: number) => Promise<void>;
   onOpenAccount: () => void;
+  libraryEnabled?: boolean;
+  libraryNavigation?: ReactNode;
+  libraryStorage?: ReactNode;
 }) {
   const replayTour = useReplayTour();
   const [actionTarget, setActionTarget] = useState<BoardListItemDto | null>(null);
@@ -36,6 +43,7 @@ export function Sidebar({
   const [createBusy, setCreateBusy] = useState(false);
   const [createError, setCreateError] = useState("");
   const [search, setSearch] = useState("");
+  const [libraryExpanded, setLibraryExpanded] = useState(() => isLibraryPath(window.location.pathname));
   const searchRef = useRef<HTMLInputElement>(null);
   const chatUnread = useSyncExternalStore(subscribeNotificationUnread, chatUnreadCounts);
   const unread = useSyncExternalStore(subscribeNotificationUnread, notificationUnread);
@@ -86,12 +94,25 @@ export function Sidebar({
   const links = [
     { label: "Home", icon: Home, target: "/home", tour: "home", active: path === "/home" },
     { label: "Boards", icon: LayoutDashboard, target: "/boards", tour: "boards", active: path.startsWith("/boards") },
+    ...(libraryEnabled ? [{ label: 'Library', icon: BookOpen, target: '/library', active: isLibraryPath(path) }] : []),
     { label: "Week", icon: CheckSquare, target: "/tasks", active: path === "/tasks" || /^\/tasks\/[0-9a-f-]{36}$/i.test(path) },
     { label: "Calendar", icon: CalendarDays, target: "/calendar", tour: "calendar", active: path === "/calendar" },
     { label: "Quick tasks", icon: Inbox, target: "/tasks/quick", tour: "quick-tasks", active: path === "/tasks/quick" },
     { label: "Templates", icon: Boxes, target: "/tasks/templates", tour: "templates", active: path === "/tasks/templates" },
     { label: "Notifications", icon: Bell, target: "/notifications", active: path === "/notifications" },
   ];
+
+  const destinationButton = ({ label, icon: Icon, target, tour, active }: typeof links[number]) => <button type="button" data-tour={tour}
+    className={`wk-shell-link${active ? ' wk-shell-link--active' : ''}`}
+    aria-current={active ? 'page' : undefined} aria-label={target === '/notifications' && unread ? `${label}, ${unread} unread` : label} title={label}
+    aria-expanded={target === '/library' ? !collapsed && libraryExpanded : undefined}
+    aria-controls={target === '/library' ? 'wk-sidebar-library-sections' : undefined}
+    onClick={() => {
+      if (target !== '/library') { navigate(target); return; }
+      if (collapsed) { onToggle(); setLibraryExpanded(true); }
+      else setLibraryExpanded(value => !value);
+      if (!active && (collapsed || !libraryExpanded)) navigate(target);
+    }}><Icon size={16} aria-hidden="true" /><span>{label}</span>{target === '/library' && <ChevronDown className="wk-sidebar-library-toggle" size={14} aria-hidden="true" />}{target === '/notifications' && unread > 0 && <span className="wk-nav-badge" aria-hidden="true">{unread > 99 ? '99+' : unread}</span>}</button>;
 
   const boardLink = (board: BoardListItemDto) => (
     <button className={`wk-board-link${activeBoardId === board.id ? " wk-board-link--active" : ""}`}
@@ -125,11 +146,14 @@ export function Sidebar({
     </div>
 
     <nav data-tour="navigation" className="wk-sidebar-nav" aria-label="Primary navigation">
+      <div className="wk-sidebar-scroll">
       <div className="wk-sidebar-primary-links">
-        {links.map(({ label, icon: Icon, target, tour, active }) => <button key={target} data-tour={tour}
-          className={`wk-shell-link${active ? " wk-shell-link--active" : ""}`}
-          aria-current={active ? "page" : undefined} aria-label={target === "/notifications" && unread ? `${label}, ${unread} unread` : label} title={label}
-          onClick={() => navigate(target)}><Icon size={16} aria-hidden="true" /><span>{label}</span>{target === "/notifications" && unread > 0 && <span className="wk-nav-badge" aria-hidden="true">{unread > 99 ? "99+" : unread}</span>}</button>)}
+        {links.filter(link => !libraryStorage || link.target !== '/notifications').map(destination => <Fragment key={destination.target}>
+          {destinationButton(destination)}
+          {destination.target === '/library' && <div id="wk-sidebar-library-sections" className="wk-sidebar-library-slot" data-open={!collapsed && libraryExpanded} inert={collapsed || !libraryExpanded} aria-hidden={collapsed || !libraryExpanded}>
+            <div className="wk-sidebar-library-inner">{libraryNavigation}</div>
+          </div>}
+        </Fragment>)}
       </div>
       <div className="wk-sidebar-boards">
         <p>Your boards</p>
@@ -140,6 +164,11 @@ export function Sidebar({
           {search && visibleBoards.length === 0 && <p className="wk-sidebar-search-empty">No matching boards</p>}
         </div>
       </div>
+      </div>
+      {libraryStorage && <div className="wk-sidebar-bottom">
+        {destinationButton(links[links.length - 1])}
+        {libraryStorage}
+      </div>}
     </nav>
 
     <div className="wk-sidebar-account-area">

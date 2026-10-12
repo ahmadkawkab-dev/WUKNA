@@ -23,7 +23,6 @@ import { PrivacyPolicyPage, PublicHome, TermsOfServicePage } from "../features/p
 const AccountPanel = lazy(() => import("../features/account/AccountPanel").then((module) => ({ default: module.AccountPanel })));
 import { accountSectionForPath } from "../features/account/accountRoute";
 import { Wordmark } from "../components/brand/Wordmark";
-import { AppShell } from "../components/navigation/AppShell";
 import { OnboardingProvider } from "../features/onboarding/OnboardingProvider";
 import { Button } from "../components/ui/Button";
 import { LoadingSkeleton } from "../components/ui/LoadingSkeleton";
@@ -38,6 +37,9 @@ import { NotificationRuntime } from "../features/notifications/NotificationRunti
 import { clearBrowserNotificationSession } from "../features/notifications/browserPush";
 const NotificationsPage = lazy(() => import("../features/notifications/NotificationsPage").then((module) => ({ default: module.NotificationsPage })));
 import { SoonPage } from "../features/future/PreviewUI";
+import { isLibraryPath, safeLibraryReturnPath } from '../features/library/libraryRoutes';
+const LibraryRoot = lazy(() => import('../features/library/LibraryRoot').then(module => ({ default: module.LibraryRoot })));
+const WorkspaceShell = lazy(() => import('../features/library/LibraryAppShell').then(module => ({ default: module.LibraryAppShell })));
 const Workspace = lazy(() => import("../features/boards/BoardWorkspace").then((module) => ({ default: module.Workspace })));
 import { realtimeConnection } from "../realtime/connection";
 import {
@@ -168,7 +170,7 @@ export default function App() {
       setBoardsReady(false);
       setStartupError("Your session expired. Please sign in again.");
       const target = window.location.pathname + window.location.search;
-      returnPath.current = rememberNotificationReturnPath(target);
+      returnPath.current = safeLibraryReturnPath(window.location.pathname) ?? rememberNotificationReturnPath(target);
       window.history.replaceState(null, "", "/login");
       setPath("/login");
     });
@@ -177,7 +179,7 @@ export default function App() {
   useEffect(() => {
     if (!starting && !startupBlocked && !session && !["/", "/login", "/register", "/privacy", "/terms"].includes(path)) {
       const target = window.location.pathname + window.location.search;
-      returnPath.current = rememberNotificationReturnPath(target);
+      returnPath.current = safeLibraryReturnPath(window.location.pathname) ?? rememberNotificationReturnPath(target);
       window.history.replaceState(null, "", "/login");
       setPath("/login");
     }
@@ -323,7 +325,8 @@ export default function App() {
   }
   return (
     <OnboardingProvider key={session.user.id} ready={boardsReady && !loading && !failure} path={path}>
-    <AppShell
+    <Suspense fallback={<LoadingSkeleton label="Opening workspace" layout="dashboard" />}><WorkspaceShell
+      libraryEnabled={true}
       user={session.user}
       boards={boards}
       activeBoardId={boardId}
@@ -343,7 +346,8 @@ export default function App() {
       <Suspense fallback={<LoadingSkeleton label="Opening page" layout={path === "/calendar" ? "calendar" : path === "/tasks" ? "week" : "list"} />}>
       {path === "/home" ? <DashboardPage user={session.user} boards={boards} boardsLoading={loading} boardsError={failure}
         retryBoards={() => void loadBoards().catch(() => undefined)} navigate={navigate} notify={notify} />
-      : path === "/library" ? <SoonPage area="Library" /> : path === "/library/pictures" ? <SoonPage area="Pictures" /> : path === "/journal" ? <SoonPage area="Journal" /> : path === "/tasks/templates" ? <TemplatesPage notify={notify} navigate={navigate} />
+      : isLibraryPath(path) ? <LibraryRoot accountId={session.user.id} path={path} navigate={navigate} />
+      : path === "/journal" ? <SoonPage area="Journal" /> : path === "/tasks/templates" ? <TemplatesPage notify={notify} navigate={navigate} />
       : path === "/notifications" ? <NotificationsPage navigate={navigate} notify={notify} />
       : path === "/tasks" || path === "/tasks/quick" || taskId ? <TasksPage key={path} notify={notify} openTaskId={taskId}
         initialView={path === "/tasks/quick" ? "inbox" : "week"}
@@ -383,7 +387,7 @@ export default function App() {
         />
       )}
       </Suspense>
-    </AppShell>
+    </WorkspaceShell></Suspense>
     </OnboardingProvider>
   );
 }

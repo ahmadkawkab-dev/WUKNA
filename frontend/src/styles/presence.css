@@ -11,7 +11,7 @@
   list-style: none;
 }
 .wk-presence summary::-webkit-details-marker { display: none; }
-.wk-presence summary:hover { background: var(--hover); }
+@media (hover: hover) { .wk-presence summary:hover { background: var(--hover); } }
 .wk-presence-avatars { display: flex; align-items: center; padding-inline-start: var(--space-2); }
 .wk-presence-avatar,
 .wk-presence-more {

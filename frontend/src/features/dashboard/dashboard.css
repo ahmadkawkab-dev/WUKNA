@@ -31,7 +31,7 @@
 .wk-dashboard-task-list { margin: 0; padding: 0; list-style: none; }
 .wk-dashboard-task-list li { min-height: 3rem; display: flex; align-items: center; gap: .625rem; padding: .5rem .75rem; border-top: 1px solid var(--border); }
 .wk-dashboard-task-check { width: 1.0625rem; height: 1.0625rem; flex: none; padding: 0; border: 1px solid var(--control-border); border-radius: .3125rem; background: var(--surface); }
-.wk-dashboard-task-check:hover { border-color: var(--primary); background: var(--selected); }
+@media (hover: hover) { .wk-dashboard-task-check:hover { border-color: var(--primary); background: var(--selected); } }
 .wk-dashboard-task-title { min-width: 0; display: grid; flex: 1; padding: 0; border: 0; color: inherit; background: transparent; text-align: start; }
 .wk-dashboard-task-title strong { overflow: hidden; font-size: var(--text-control); font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
 .wk-dashboard-task-title small { color: var(--muted-foreground); font-size: var(--text-meta); }
@@ -102,7 +102,7 @@
 
 .wk-dashboard-side-column { align-content: start; }
 .wk-dashboard-summary-card, .wk-dashboard-board-grid button { transition: border-color var(--motion-fast) var(--ease-settle), background-color var(--motion-fast) var(--ease-settle); }
-.wk-dashboard-board-grid button:hover { box-shadow: inset 0 0 0 1px var(--control-border); }
+@media (hover: hover) { .wk-dashboard-board-grid button:hover { box-shadow: inset 0 0 0 1px var(--control-border); } }
 @media (max-width: 767px) {
   .wk-dashboard-body { display: block; }
   .wk-dashboard-header { min-height: 0; border: 0; background: var(--background); padding: var(--space-5) var(--space-4) 0; }

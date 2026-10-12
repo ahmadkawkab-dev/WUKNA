@@ -3,6 +3,8 @@ import type { BoardListItemDto } from "../../api";
 import type { AuthSession } from "../../auth";
 import { MobileHeader, MobileNav } from "./MobileNav";
 import { Sidebar } from "./Sidebar";
+import { LibrarySidebarSlot } from './LibrarySidebarSlot';
+import { isLibraryPath, libraryRoute } from '../../features/library/libraryRoutes';
 
 export function AppShell({
   user,
@@ -17,6 +19,9 @@ export function AppShell({
   signOutEverywhere,
   notify,
   children,
+  libraryEnabled = false,
+  renderLibraryStorage,
+  renderLibraryNavigation,
 }: {
   user: AuthSession["user"];
   boards: BoardListItemDto[];
@@ -30,6 +35,9 @@ export function AppShell({
   signOutEverywhere: () => void;
   notify: (message: string) => void;
   children: ReactNode;
+  libraryEnabled?: boolean;
+  renderLibraryStorage?: (navigate: (path: string) => void) => ReactNode;
+  renderLibraryNavigation?: (navigate: (path: string) => void) => ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(() => window.matchMedia('(min-width: 768px) and (max-width: 1199px)').matches);
   useEffect(() => {
@@ -45,7 +53,7 @@ export function AppShell({
     const labels: Record<string, string> = { '/home': 'Home', '/boards': 'Boards', '/tasks': 'Week',
       '/tasks/quick': 'Quick tasks', '/tasks/templates': 'Templates', '/calendar': 'Calendar',
       '/notifications': 'Notifications', '/account/profile': 'Profile', '/account/preferences': 'Preferences & security' };
-    document.title = `${labels[path] ?? (path.startsWith('/boards/') ? 'Board' : 'Wukna')} · Wukna`;
+    document.title = `${labels[path] ?? (isLibraryPath(path) ? libraryEnabled ? `${libraryRoute(path)?.label ?? 'Page unavailable'} · Library` : 'Library' : path.startsWith('/boards/') ? 'Board' : 'Wukna')} · Wukna`;
     if (previousPath.current === path) return;
     previousPath.current = path;
     const frame = requestAnimationFrame(() => {
@@ -53,13 +61,16 @@ export function AppShell({
       main.current?.focus({ preventScroll: true });
     });
     return () => cancelAnimationFrame(frame);
-  }, [path]);
+  }, [path, libraryEnabled]);
   const openBoards = () => navigate("/boards");
 
   return (
-    <div className={`wk-app-shell${collapsed ? " wk-app-shell--collapsed" : ""}`}>
+    <LibrarySidebarSlot.Provider value={libraryEnabled && !!renderLibraryNavigation}><div className={`wk-app-shell${collapsed ? " wk-app-shell--collapsed" : ""}`}>
       <a className="wk-skip-link" href="#wk-main-content">Skip to content</a>
       <Sidebar
+        libraryEnabled={libraryEnabled}
+        libraryNavigation={renderLibraryNavigation?.(navigate)}
+        libraryStorage={renderLibraryStorage?.(navigate)}
         user={user}
         boards={boards}
         activeBoardId={activeBoardId}
@@ -76,7 +87,7 @@ export function AppShell({
       <main ref={main} tabIndex={-1} className="wk-shell-main" id="wk-main-content">
         <div className="wk-feature-stage">{children}</div>
       </main>
-      <MobileNav onBoards={openBoards} navigate={navigate} />
-    </div>
+      <MobileNav onBoards={openBoards} navigate={navigate} libraryEnabled={libraryEnabled} renderLibraryStorage={renderLibraryStorage} />
+    </div></LibrarySidebarSlot.Provider>
   );
 }

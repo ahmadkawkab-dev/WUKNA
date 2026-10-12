@@ -10,6 +10,8 @@ using Wukna.Features.Tasks;
 using Wukna.Features.Calendar;
 using Wukna.Features.Notifications;
 using Wukna.Features.Chat;
+using Wukna.Features.Library;
+using Wukna.Features.Subscriptions;
 using Wukna.Shared.Data.AppDbContext;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
@@ -59,6 +61,8 @@ builder.Services.AddSingleton(jwtOptions);
 builder.Services.AddSingleton(googleSettings);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddChatMessages();
+builder.Services.AddPersonalLibrary();
+builder.Services.AddStorageSubscriptions();
 builder.Services.AddOptions<BoardOptions>().BindConfiguration("Board")
     .Validate(options => options.MaxGuests is >= 0 and <= 1000 && options.MembershipWritesPerMinute is >= 1 and <= 10000,
         "Board:MaxGuests must be 0–1000; Board:MembershipWritesPerMinute must be 1–10000.").ValidateOnStart();
@@ -251,6 +255,7 @@ app.UseSwaggerUI();
 app.UseStaticFiles();
 app.UseStaticFiles(ProfileImageStaticFiles.Options(app.Services.GetRequiredService<IProfileImageStore>()));
 app.UseRouting();
+app.UseMiddleware<LibraryRequestMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
@@ -272,6 +277,8 @@ app.MapWebPushEndpoints();
 app.MapNotificationEndpoints();
 app.MapNotificationPreferenceEndpoints();
 app.MapChatMessageEndpoints();
+app.MapLibraryEndpoints();
+app.MapStorageSubscriptionEndpoints();
 app.MapHub<ChatHub>(ChatHub.Path, options =>
     options.CloseOnAuthenticationExpiration = true).RequireAuthorization();
 app.MapHub<BoardHub>(BoardHub.Path, options =>

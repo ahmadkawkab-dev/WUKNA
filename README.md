@@ -140,6 +140,20 @@ A personal space for saving and organizing useful content, including:
 
 The goal is to make things you want to revisit part of your workspace instead of leaving them scattered across bookmarks and different platforms.
 
+The current Library covers Pictures, Documents (including code files),
+and video bookmarks. Its [backend implementation](docs/PERSONAL_LIBRARY_BACKEND.md)
+provides authenticated metadata, organization, search, Trash, and upload-session
+APIs. The frontend uses these APIs for persistent metadata and organization.
+The [private storage integration](docs/PERSONAL_LIBRARY_STORAGE.md) supplies
+validated, malware-scanned uploads, authenticated downloads and picture previews
+through an opt-in SeaweedFS configuration. Storage stays unavailable when that
+configuration is disabled. Each account is limited to 1 GB (1,000,000,000 bytes),
+including originals, thumbnails, Trash, reservations and pending cleanup.
+Payments remain disabled. Library demo adapters, sample media and preview routes
+have been removed; new accounts start empty. See the
+[final acceptance record](docs/PERSONAL_LIBRARY_ACCEPTANCE.md) for verification
+and deployment prerequisites.
+
 ### Pictures
 
 A dedicated visual library for saving and organizing images.
@@ -222,7 +236,7 @@ Wukna is under active development.
 
 Boards, real-time collaboration, chat, personal tasks, calendar, notifications, accounts, and profiles form the current application.
 
-Library, Pictures, Journal, recurring planning, and additional calendar experiences are planned as Wukna continues to grow.
+Journal, recurring planning, and additional calendar experiences are planned as Wukna continues to grow.
 
 ## License
 

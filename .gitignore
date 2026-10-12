@@ -71,6 +71,9 @@ postgres-data/
 /App_Data/profile-images/
 /App_Data/data-protection-keys/
 /App_Data/chat-attachments/
+/App_Data/library-quarantine/
+library-s3.json
+storage.env
 .DS_Store
 Thumbs.db
 Desktop.ini
@@ -81,6 +84,9 @@ Desktop.ini
 # Ignore Markdown documentation except maintained project guidance
 *.md
 !/README.md
+!/AGENTS.md
+!/BRAND_IDENTITY.md
+!/frontend/brand-review/README.md
 !/docs/session-restoration.md
 !/docs/UI_UX_DESIGN_SYSTEM.md
 !/docs/COLOR_STUDIO.md
@@ -94,3 +100,8 @@ Desktop.ini
 !/docs/PRODUCTION_RELEASE.md
 !/docs/ONBOARDING.md
 !/docs/HTTP_ERRORS.md
+!/docs/PERSONAL_LIBRARY_PLAN.md
+!/docs/PERSONAL_LIBRARY_FRONTEND.md
+!/docs/PERSONAL_LIBRARY_BACKEND.md
+!/docs/PERSONAL_LIBRARY_STORAGE.md
+!/docs/PERSONAL_LIBRARY_ACCEPTANCE.md

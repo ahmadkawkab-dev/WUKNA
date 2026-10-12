@@ -1,12 +1,13 @@
 import { TourHelpIcon } from "../../features/onboarding/TourHelpIcon";
 import { notificationUnread, subscribeNotificationUnread } from "../../features/notifications/notificationState";
-import { useSyncExternalStore, useState } from "react";
-import { Bell, CalendarDays, CheckSquare, Home, LayoutDashboard, Menu, Boxes, Inbox } from "lucide-react";
+import { useSyncExternalStore, useState, type ReactNode } from "react";
+import { Bell, BookOpen, CalendarDays, CheckSquare, Home, LayoutDashboard, Menu, Boxes, Inbox } from "lucide-react";
 import type { AuthSession } from "../../auth";
 import { Avatar, identityLabel } from "../ui/Avatar";
 import { IconButton } from "../ui/Button";
 import { useReplayTour } from "../../features/onboarding/OnboardingProvider";
 import { Dialog } from "../ui/Dialog";
+import { isLibraryPath } from '../../features/library/libraryRoutes';
 
 export function MobileHeader({ onHome, onOpenAccount, user }: { onHome: () => void; onOpenAccount: () => void; user: AuthSession["user"] }) {
   const replayTour = useReplayTour();
@@ -23,11 +24,11 @@ export function MobileHeader({ onHome, onOpenAccount, user }: { onHome: () => vo
   </header>;
 }
 
-export function MobileNav({ onBoards, navigate }: { onBoards: () => void; navigate: (path: string) => void }) {
+export function MobileNav({ onBoards, navigate, libraryEnabled = false, renderLibraryStorage }: { onBoards: () => void; navigate: (path: string) => void; libraryEnabled?: boolean; renderLibraryStorage?: (navigate: (path: string) => void) => ReactNode }) {
   const unread = useSyncExternalStore(subscribeNotificationUnread, notificationUnread);
   const path = window.location.pathname;
   const [menuOpen, setMenuOpen] = useState(false);
-  const moreActive = path.startsWith("/boards") || path === "/tasks/quick" || path === "/tasks/templates" || path === "/notifications" || path.startsWith("/account");
+  const moreActive = path.startsWith("/boards") || path === "/tasks/quick" || path === "/tasks/templates" || path === "/notifications" || path.startsWith("/account") || libraryEnabled && isLibraryPath(path);
   const go = (target: string) => { setMenuOpen(false); navigate(target); };
   return <>
     <nav data-tour="navigation" className="wk-mobile-nav" aria-label="Primary navigation">
@@ -43,11 +44,13 @@ export function MobileNav({ onBoards, navigate }: { onBoards: () => void; naviga
     {menuOpen && <Dialog title="More" onClose={() => setMenuOpen(false)} className="wk-mobile-more">
       <div className="wk-mobile-more-links">
         <button onClick={() => { setMenuOpen(false); onBoards(); }}><LayoutDashboard size={18} aria-hidden="true" /> Boards</button>
+        {libraryEnabled && <button aria-current={isLibraryPath(path) ? 'page' : undefined} onClick={() => go('/library')}><BookOpen size={18} aria-hidden="true" /> Library</button>}
         <button onClick={() => go("/tasks/quick")}><Inbox size={18} aria-hidden="true" /> Quick tasks</button>
         <button onClick={() => go("/tasks/templates")}><Boxes size={18} aria-hidden="true" /> Templates</button>
-        <button onClick={() => go("/notifications")}><Bell size={18} aria-hidden="true" /> Notifications{unread > 0 ? ` · ${unread}` : ""}</button>
         <button onClick={() => go("/account/profile")}><Menu size={18} aria-hidden="true" /> Account</button>
+        <button onClick={() => go("/notifications")}><Bell size={18} aria-hidden="true" /> Notifications{unread > 0 ? ` · ${unread}` : ""}</button>
       </div>
+      {renderLibraryStorage?.(go)}
     </Dialog>}
   </>;
 }

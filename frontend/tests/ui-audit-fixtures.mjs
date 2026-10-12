@@ -18,6 +18,7 @@ const message = {id:id(70),boardId:id(2),sequence:'1',cursor:'1',type:'text',bod
 export async function fixtures(context,{state='populated',authenticated=true,missing=[]}={}) {
  await context.route('**/api/**',async route=>{
   const url=new URL(route.request().url()),p=url.pathname,method=route.request().method();
+  if(!p.startsWith('/api/'))return route.continue(); // Source modules may also live in an api/ directory.
   const send=json=>route.fulfill({json}),empty=state==='empty',list=x=>empty?[]:x;
   if(p==='/api/auth/csrf')return send({token:'synthetic-csrf-token'});
   if(p==='/api/auth/refresh')return authenticated?send({accessToken:'synthetic-not-a-real-token',expiresAt:'2099-01-01T00:00:00Z',user}):route.fulfill({status:401,json:{code:'unauthenticated'}});
@@ -27,6 +28,11 @@ export async function fixtures(context,{state='populated',authenticated=true,mis
   if(p==='/api/profile/onboarding')return send({status:'Completed',version:1});
   if(p==='/api/auth/account')return send({id:user.id,email:user.email,hasPassword:true,externalLogins:[]});
   if(p==='/api/tasks/settings')return send({timeZoneId:'Asia/Beirut'});
+  // The workspace storage utility requests Library metadata on every page.
+  if(method==='GET'&&p==='/api/library/summary')return send({categories:[],storage:{quotaBytes:1e9,usedBytes:0,reservedBytes:0,availableBytes:1e9,entitlementSource:'free'}});
+  if(method==='GET'&&p==='/api/library/capabilities')return send({storageAvailable:false,checkoutEnabled:false});
+  if(method==='GET'&&['/api/library/items','/api/library/folders','/api/library/collections'].includes(p))return send({items:[],nextCursor:null});
+  if(method==='GET'&&p==='/api/subscriptions/storage-plans')return send([{id:'free',name:'Free',quotaBytes:1e9,checkoutEnabled:false}]);
   if(p==='/api/boards')return send(list(boards));
   if(/^\/api\/boards\/[^/]+$/.test(p))return send(boards.find(b=>p.endsWith(b.id))??boards[0]);
   if(p.endsWith('/members')&&!p.includes('/chat/'))return send([{...user,userId:user.id,role:1,canEdit:true},{...user,userId:id(90),username:'guest.test',displayName:'Guest with a long name',role:0,canEdit:false}]);

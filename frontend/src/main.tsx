@@ -18,9 +18,12 @@ import "./styles/future.css";
 import { initializeColorPalette } from './theme/paletteState';
 import { initializeBoardVariations } from './theme/boardVariationState';
 import './styles/palettes.css';
+import { initializeInputModality } from './components/ui/inputModality';
 
 initializeColorPalette();
 initializeBoardVariations();
+const disposeInputModality = initializeInputModality();
+import.meta.hot?.dispose(disposeInputModality);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <AppErrorBoundary>{futurePreviewEnabled && isFuturePreviewPath(window.location.pathname) ? <Suspense fallback={<LoadingSkeleton label="Opening preview" layout="cards" />}><FuturePreviewEntry /></Suspense> : <App />}</AppErrorBoundary>,

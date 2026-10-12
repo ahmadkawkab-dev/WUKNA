@@ -217,6 +217,7 @@ export async function restoreSession(): Promise<AuthSession | null> {
 export async function apiFetch(
   input: RequestInfo | URL,
   init?: RequestInit,
+  expectedUserId?: string,
 ): Promise<Response> {
   const request = new Request(input, init);
   const url = new URL(request.url);
@@ -232,11 +233,21 @@ export async function apiFetch(
     throw new AuthApiError("unauthenticated", 401);
   }
 
+  const checkIdentity = (userId: string) => {
+    request.signal.throwIfAborted();
+    if (expectedUserId !== undefined && userId !== expectedUserId)
+      throw new AuthApiError("account_changed", 401);
+  };
+  checkIdentity(active.user.id);
+
   let csrfRetried = false;
   const send = async (accessToken: string) => {
     const headers = new Headers(request.headers);
     headers.set("Authorization", `Bearer ${accessToken}`);
-    const fetchRequest = () => fetch(new Request(request.clone(), { headers, credentials: "include" }));
+    const fetchRequest = () => {
+      checkIdentity(session?.user.id ?? "");
+      return fetch(new Request(request.clone(), { headers, credentials: "include" }));
+    };
     const response = await fetchRequest();
     if (csrfRetried || !await isCsrfRejection(response)) return response;
     csrfRetried = true;
@@ -250,7 +261,7 @@ export async function apiFetch(
   if (response.status === 401) {
     session = null;
     const renewed = await restoreSession();
-    if (renewed) response = await send(renewed.accessToken);
+    if (renewed) { checkIdentity(renewed.user.id); response = await send(renewed.accessToken); }
     else sessionExpiredHandler?.();
   }
   return response;

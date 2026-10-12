@@ -23,6 +23,8 @@ jobs:
         run: dotnet restore tests/Wukna.IntegrationTests/Wukna.IntegrationTests.csproj
 
       - name: Build
+        env:
+          SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
         run: dotnet build tests/Wukna.IntegrationTests/Wukna.IntegrationTests.csproj --configuration Release --no-restore
 
       - name: Test
@@ -81,6 +83,8 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: ghcr.io/ahmadkawkab-dev/wukna-api:sha-${{ github.sha }}
+          secrets: |
+            "sixlabors_license=${{ secrets.SIXLABORS_LICENSE_KEY }}"
 
       - name: Build and push frontend
         uses: docker/build-push-action@v7

@@ -1,0 +1,398 @@
+[
+  {
+    "name": "wukna-header-compact-dark.svg",
+    "fits": true,
+    "viewBox": [
+      0,
+      0,
+      97.27788543701172,
+      32
+    ],
+    "bbox": [
+      0.32000023126602173,
+      4.624762058258057,
+      96.9578857421875,
+      22.735239028930664
+    ],
+    "paths": 6,
+    "bytes": 4685
+  },
+  {
+    "name": "wukna-header-compact-light.svg",
+    "fits": true,
+    "viewBox": [
+      0,
+      0,
+      97.27788543701172,
+      32
+    ],
+    "bbox": [
+      0.32000023126602173,
+      4.624762058258057,
+      96.9578857421875,
+      22.735239028930664
+    ],
+    "paths": 6,
+    "bytes": 4685
+  },
+  {
+    "name": "wukna-lockup-horizontal-dark.svg",
+    "fits": true,
+    "viewBox": [
+      0,
+      0,
+      1117.2630615234375,
+      300
+    ],
+    "bbox": [
+      4,
+      7.8095245361328125,
+      1113.2630615234375,
+      284.19049072265625
+    ],
+    "paths": 6,
+    "bytes": 4662
+  },
+  {
+    "name": "wukna-lockup-horizontal-light.svg",
+    "fits": true,
+    "viewBox": [
+      0,
+      0,
+      1117.2630615234375,
+      300
+    ],
+    "bbox": [
+      4,
+      7.8095245361328125,
+      1113.2630615234375,
+      284.19049072265625
+    ],
+    "paths": 6,
+    "bytes": 4662
+  },
+  {
+    "name": "wukna-lockup-stacked-dark.svg",
+    "fits": true,
+    "viewBox": [
+      0,
+      0,
+      425,
+      505
+    ],
+    "bbox": [
+      4,
+      7.8095245361328125,
+      412.25,
+      483.496826171875
+    ],
+    "paths": 6,
+    "bytes": 4649
+  },
+  {
+    "name": "wukna-lockup-stacked-light.svg",
+    "fits": true,
+    "viewBox": [
+      0,
+      0,
+      425,
+      505
+    ],
+    "bbox": [
+      4,
+      7.8095245361328125,
+      412.25,
+      483.496826171875
+    ],
+    "paths": 6,
+    "bytes": 4649
+  },
+  {
+    "name": "wukna-symbol-berry.svg",
+    "fits": true,
+    "viewBox": [
+      90,
+      150,
+      425,
+      300
+    ],
+    "bbox": [
+      94,
+      157.8095245361328,
+      412.25,
+      284.19049072265625
+    ],
+    "paths": 1,
+    "bytes": 278
+  },
+  {
+    "name": "wukna-symbol-black.svg",
+    "fits": true,
+    "viewBox": [
+      90,
+      150,
+      425,
+      300
+    ],
+    "bbox": [
+      94,
+      157.8095245361328,
+      412.25,
+      284.19049072265625
+    ],
+    "paths": 1,
+    "bytes": 303
+  },
+  {
+    "name": "wukna-symbol-contrast-dark.svg",
+    "fits": true,
+    "viewBox": [
+      90,
+      150,
+      425,
+      300
+    ],
+    "bbox": [
+      94,
+      157.8095245361328,
+      412.25,
+      284.19049072265625
+    ],
+    "paths": 1,
+    "bytes": 303
+  },
+  {
+    "name": "wukna-symbol-contrast-light.svg",
+    "fits": true,
+    "viewBox": [
+      90,
+      150,
+      425,
+      300
+    ],
+    "bbox": [
+      94,
+      157.8095245361328,
+      412.25,
+      284.19049072265625
+    ],
+    "paths": 1,
+    "bytes": 303
+  },
+  {
+    "name": "wukna-symbol-dark.svg",
+    "fits": true,
+    "viewBox": [
+      90,
+      150,
+      425,
+      300
+    ],
+    "bbox": [
+      94,
+      157.8095245361328,
+      412.25,
+      284.19049072265625
+    ],
+    "paths": 1,
+    "bytes": 303
+  },
+  {
+    "name": "wukna-symbol-light.svg",
+    "fits": true,
+    "viewBox": [
+      90,
+      150,
+      425,
+      300
+    ],
+    "bbox": [
+      94,
+      157.8095245361328,
+      412.25,
+      284.19049072265625
+    ],
+    "paths": 1,
+    "bytes": 303
+  },
+  {
+    "name": "wukna-symbol-sky.svg",
+    "fits": true,
+    "viewBox": [
+      90,
+      150,
+      425,
+      300
+    ],
+    "bbox": [
+      94,
+      157.8095245361328,
+      412.25,
+      284.19049072265625
+    ],
+    "paths": 1,
+    "bytes": 278
+  },
+  {
+    "name": "wukna-symbol-tonal-dark.svg",
+    "fits": true,
+    "viewBox": [
+      90,
+      150,
+      425,
+      300
+    ],
+    "bbox": [
+      94,
+      157.8095245361328,
+      412.25,
+      284.19049072265625
+    ],
+    "paths": 9,
+    "bytes": 994
+  },
+  {
+    "name": "wukna-symbol-tonal.svg",
+    "fits": true,
+    "viewBox": [
+      90,
+      150,
+      425,
+      300
+    ],
+    "bbox": [
+      94,
+      157.8095245361328,
+      412.25,
+      284.19049072265625
+    ],
+    "paths": 9,
+    "bytes": 994
+  },
+  {
+    "name": "wukna-symbol-white.svg",
+    "fits": true,
+    "viewBox": [
+      90,
+      150,
+      425,
+      300
+    ],
+    "bbox": [
+      94,
+      157.8095245361328,
+      412.25,
+      284.19049072265625
+    ],
+    "paths": 1,
+    "bytes": 303
+  },
+  {
+    "name": "wukna-wordmark-custom-dark.svg",
+    "fits": true,
+    "viewBox": [
+      0,
+      0,
+      282,
+      64
+    ],
+    "bbox": [
+      3,
+      7,
+      242,
+      46
+    ],
+    "paths": 7,
+    "bytes": 774
+  },
+  {
+    "name": "wukna-wordmark-custom-light.svg",
+    "fits": true,
+    "viewBox": [
+      0,
+      0,
+      282,
+      64
+    ],
+    "bbox": [
+      3,
+      7,
+      242,
+      46
+    ],
+    "paths": 7,
+    "bytes": 774
+  },
+  {
+    "name": "wukna-wordmark-humanist-dark.svg",
+    "fits": true,
+    "viewBox": [
+      24,
+      -706.400634765625,
+      2653,
+      718.400634765625
+    ],
+    "bbox": [
+      24,
+      -706.400634765625,
+      2653,
+      718.400634765625
+    ],
+    "paths": 5,
+    "bytes": 2452
+  },
+  {
+    "name": "wukna-wordmark-humanist-light.svg",
+    "fits": true,
+    "viewBox": [
+      24,
+      -706.400634765625,
+      2653,
+      718.400634765625
+    ],
+    "bbox": [
+      24,
+      -706.400634765625,
+      2653,
+      718.400634765625
+    ],
+    "paths": 5,
+    "bytes": 2452
+  },
+  {
+    "name": "wukna-wordmark-instrument-dark.svg",
+    "fits": true,
+    "viewBox": [
+      15.9996337890625,
+      -726.666259765625,
+      2908.668212890625,
+      736.666259765625
+    ],
+    "bbox": [
+      15.9996337890625,
+      -726.666259765625,
+      2908.66845703125,
+      736.666259765625
+    ],
+    "paths": 5,
+    "bytes": 4397
+  },
+  {
+    "name": "wukna-wordmark-instrument-light.svg",
+    "fits": true,
+    "viewBox": [
+      15.9996337890625,
+      -726.666259765625,
+      2908.668212890625,
+      736.666259765625
+    ],
+    "bbox": [
+      15.9996337890625,
+      -726.666259765625,
+      2908.66845703125,
+      736.666259765625
+    ],
+    "paths": 5,
+    "bytes": 4397
+  }
+]
