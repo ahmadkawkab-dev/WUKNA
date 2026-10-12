@@ -1,4 +1,5 @@
-/* Dedicated to notifications. Never caches authenticated pages or stores access tokens. */
+/* Notifications and installed-app shares. Never caches authenticated pages or stores access tokens. */
+importScripts('/library-share-worker.js');
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", event => event.waitUntil(self.clients.claim()));
 function database() {

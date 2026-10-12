@@ -1,0 +1,5 @@
+.wk-search-input { position: relative; display: flex; align-items: center; align-self: stretch; flex: 1; min-width: 0; min-height: calc(var(--target-size-minimum) + 2 * var(--border-width)); }
+.wk-search-input > input { display: block; min-width: 0; width: 100%; }
+.wk-search-input[data-filled='true'] > input { padding-inline-end: calc(var(--control-size) + var(--space-2)); }
+.wk-search-input > .wk-search-clear { position: absolute; inset-block: var(--border-width); inset-inline-end: var(--border-width); width: var(--control-size); min-width: var(--target-size-minimum); min-height: 0; height: auto; padding: 0; color: var(--muted-foreground); }
+.wk-search-input > input[type='search']::-webkit-search-cancel-button { -webkit-appearance: none; }

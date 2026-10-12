@@ -1,0 +1,175 @@
+{
+  "rows": [
+    {
+      "y": 158,
+      "source": [
+        97,
+        502
+      ],
+      "vector": [
+        96,
+        503
+      ]
+    },
+    {
+      "y": 159,
+      "source": [
+        95,
+        504
+      ],
+      "vector": [
+        95,
+        504
+      ]
+    },
+    {
+      "y": 160,
+      "source": [
+        94,
+        504
+      ],
+      "vector": [
+        94,
+        505
+      ]
+    },
+    {
+      "y": 165,
+      "source": [
+        94,
+        506
+      ],
+      "vector": [
+        94,
+        505
+      ]
+    },
+    {
+      "y": 180,
+      "source": [
+        98,
+        501
+      ],
+      "vector": [
+        99,
+        501
+      ]
+    },
+    {
+      "y": 204,
+      "source": [
+        106,
+        493
+      ],
+      "vector": [
+        107,
+        493
+      ]
+    },
+    {
+      "y": 247,
+      "source": [
+        120,
+        479
+      ],
+      "vector": [
+        121,
+        478
+      ]
+    },
+    {
+      "y": 308,
+      "source": [
+        140,
+        458
+      ],
+      "vector": [
+        141,
+        458
+      ]
+    },
+    {
+      "y": 350,
+      "source": [
+        154,
+        444
+      ],
+      "vector": [
+        154,
+        444
+      ]
+    },
+    {
+      "y": 391,
+      "source": [
+        167,
+        431
+      ],
+      "vector": [
+        168,
+        431
+      ]
+    },
+    {
+      "y": 440,
+      "source": [
+        183,
+        415
+      ],
+      "vector": [
+        184,
+        415
+      ]
+    },
+    {
+      "y": 441,
+      "source": [
+        183,
+        414
+      ],
+      "vector": [
+        184,
+        414
+      ]
+    },
+    {
+      "y": 442,
+      "source": [
+        184,
+        413
+      ],
+      "vector": [
+        null,
+        null
+      ]
+    },
+    {
+      "y": 443,
+      "source": [
+        null,
+        null
+      ],
+      "vector": [
+        null,
+        null
+      ]
+    },
+    {
+      "y": 444,
+      "source": [
+        null,
+        null
+      ],
+      "vector": [
+        null,
+        null
+      ]
+    }
+  ],
+  "silhouetteIntersectionOverUnion": 0.9876760845526371,
+  "sourceArea": 62343,
+  "vectorArea": 61686,
+  "comparisonResolution": 600,
+  "source": "Canva panel thumbnails at MCP-reported page placements",
+  "limitation": "Raster preview evidence. Does not establish equivalence to an original native vector."
+}

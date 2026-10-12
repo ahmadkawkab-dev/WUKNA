@@ -1,0 +1,27 @@
+# docker compose --env-file .env.docker --env-file /private/library/storage.env -f compose.yaml -f compose.library.dev.yaml ...
+services:
+  api:
+    environment:
+      Library__Storage__Enabled: "true"
+      Library__Storage__Endpoint: http://seaweedfs:8333
+      Library__Storage__Bucket: wukna-library
+      Library__Storage__AccessKey: ${LIBRARY_S3_ACCESS_KEY:?Generate Library credentials}
+      Library__Storage__SecretKey: ${LIBRARY_S3_SECRET_KEY:?Generate Library credentials}
+      Library__Storage__QuarantineDirectory: /app/App_Data/library-quarantine
+      Library__Storage__ClamHost: clamd
+    depends_on:
+      seaweedfs: {condition: service_healthy}
+      clamd: {condition: service_healthy}
+    networks: [default, library_private]
+    volumes: [library_quarantine:/app/App_Data/library-quarantine]
+  seaweedfs:
+    extends: {file: compose.library.services.yaml, service: seaweedfs}
+  clamd:
+    extends: {file: compose.library.services.yaml, service: clamd}
+networks:
+  library_private: {internal: true}
+  library_scanner_egress: {}
+volumes:
+  library_objects: {}
+  library_quarantine: {}
+  library_clam_signatures: {}

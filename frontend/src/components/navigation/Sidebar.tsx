@@ -1,7 +1,7 @@
 import { TourHelpIcon } from "../../features/onboarding/TourHelpIcon";
 import { notificationUnread, subscribeNotificationUnread, chatUnreadCounts } from "../../features/notifications/notificationState";
-import { useSyncExternalStore, useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type MouseEvent } from "react";
-import { Bell, Boxes, CalendarDays, CheckSquare, Home, Inbox, LayoutDashboard, PanelLeftClose, PanelLeftOpen, Plus, Search } from "lucide-react";
+import { Fragment, useSyncExternalStore, useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
+import { Bell, BookOpen, Boxes, CalendarDays, CheckSquare, ChevronDown, Home, Inbox, LayoutDashboard, PanelLeftClose, PanelLeftOpen, Plus, Search } from "lucide-react";
 import type { BoardListItemDto } from "../../api";
 import { errorMessage } from "../../api";
 import type { AuthSession } from "../../auth";
@@ -10,10 +10,17 @@ import { Avatar, identityLabel } from "../ui/Avatar";
 import { Button, IconButton } from "../ui/Button";
 import { useReplayTour } from "../../features/onboarding/OnboardingProvider";
 import { Dialog } from "../ui/Dialog";
+import { boardCardTone } from '../../features/boards/boardCardTone';
+import { isLibraryPath } from '../../features/library/libraryRoutes';
+import { BrandMark } from '../brand/BrandMark';
+import { SearchInput } from '../ui/SearchInput';
 
 export function Sidebar({
   user, boards, activeBoardId, collapsed, onToggle, navigate, onCreateBoard,
-  onRenameBoard, onDeleteBoard, onOpenAccount,
+  onRenameBoard, onDeleteBoard, onColorBoard, onOpenAccount,
+  libraryEnabled = false,
+  libraryNavigation,
+  libraryStorage,
 }: {
   user: AuthSession["user"];
   boards: BoardListItemDto[];
@@ -24,15 +31,21 @@ export function Sidebar({
   onCreateBoard: (title: string) => Promise<void>;
   onRenameBoard: (id: string, title: string) => Promise<void>;
   onDeleteBoard: (id: string) => Promise<void>;
+  onColorBoard: (id: string, color: BoardListItemDto['cardColor'], version: number) => Promise<void>;
   onOpenAccount: () => void;
+  libraryEnabled?: boolean;
+  libraryNavigation?: ReactNode;
+  libraryStorage?: ReactNode;
 }) {
   const replayTour = useReplayTour();
   const [actionTarget, setActionTarget] = useState<BoardListItemDto | null>(null);
+  const actionBoard = actionTarget && boards.find(board => board.id === actionTarget.id);
   const [creating, setCreating] = useState(false);
   const [createTitle, setCreateTitle] = useState("");
   const [createBusy, setCreateBusy] = useState(false);
   const [createError, setCreateError] = useState("");
   const [search, setSearch] = useState("");
+  const [libraryExpanded, setLibraryExpanded] = useState(() => isLibraryPath(window.location.pathname));
   const searchRef = useRef<HTMLInputElement>(null);
   const chatUnread = useSyncExternalStore(subscribeNotificationUnread, chatUnreadCounts);
   const unread = useSyncExternalStore(subscribeNotificationUnread, notificationUnread);
@@ -70,12 +83,12 @@ export function Sidebar({
   }
 
   function contextMenu(event: MouseEvent<HTMLButtonElement>, board: BoardListItemDto) {
-    if (board.role !== 1) return;
+    if (board.role !== 1 && !board.canEdit) return;
     event.preventDefault();
     setActionTarget(board);
   }
   function contextKey(event: KeyboardEvent<HTMLButtonElement>, board: BoardListItemDto) {
-    if (board.role !== 1 || !(event.key === "ContextMenu" || event.key === "F10" && event.shiftKey)) return;
+    if ((board.role !== 1 && !board.canEdit) || !(event.key === "ContextMenu" || event.key === "F10" && event.shiftKey)) return;
     event.preventDefault();
     setActionTarget(board);
   }
@@ -83,6 +96,7 @@ export function Sidebar({
   const links = [
     { label: "Home", icon: Home, target: "/home", tour: "home", active: path === "/home" },
     { label: "Boards", icon: LayoutDashboard, target: "/boards", tour: "boards", active: path.startsWith("/boards") },
+    ...(libraryEnabled ? [{ label: 'Library', icon: BookOpen, target: '/library', active: isLibraryPath(path) }] : []),
     { label: "Week", icon: CheckSquare, target: "/tasks", active: path === "/tasks" || /^\/tasks\/[0-9a-f-]{36}$/i.test(path) },
     { label: "Calendar", icon: CalendarDays, target: "/calendar", tour: "calendar", active: path === "/calendar" },
     { label: "Quick tasks", icon: Inbox, target: "/tasks/quick", tour: "quick-tasks", active: path === "/tasks/quick" },
@@ -90,13 +104,26 @@ export function Sidebar({
     { label: "Notifications", icon: Bell, target: "/notifications", active: path === "/notifications" },
   ];
 
+  const destinationButton = ({ label, icon: Icon, target, tour, active }: typeof links[number]) => <button type="button" data-tour={tour}
+    className={`wk-shell-link${active ? ' wk-shell-link--active' : ''}`}
+    aria-current={active ? 'page' : undefined} aria-label={target === '/notifications' && unread ? `${label}, ${unread} unread` : label} title={label}
+    aria-expanded={target === '/library' ? !collapsed && libraryExpanded : undefined}
+    aria-controls={target === '/library' ? 'wk-sidebar-library-sections' : undefined}
+    onClick={() => {
+      if (target !== '/library') { navigate(target); return; }
+      if (collapsed) { onToggle(); setLibraryExpanded(true); }
+      else setLibraryExpanded(value => !value);
+      if (!active && (collapsed || !libraryExpanded)) navigate(target);
+    }}><Icon size={16} aria-hidden="true" /><span>{label}</span>{target === '/library' && <ChevronDown className="wk-sidebar-library-toggle" size={14} aria-hidden="true" />}{target === '/notifications' && unread > 0 && <span className="wk-nav-badge" aria-hidden="true">{unread > 99 ? '99+' : unread}</span>}</button>;
+
   const boardLink = (board: BoardListItemDto) => (
     <button className={`wk-board-link${activeBoardId === board.id ? " wk-board-link--active" : ""}`}
       key={board.id} onClick={() => navigate(`/boards/${board.id}`)}
+      data-board-id={board.id} data-board-tone={board.cardColor ?? boardCardTone(board.id)}
       onContextMenu={(event) => contextMenu(event, board)} onKeyDown={(event) => contextKey(event, board)}
       aria-current={activeBoardId === board.id ? "page" : undefined}
-      aria-keyshortcuts={board.role === 1 ? "Shift+F10" : undefined}
-      title={board.role === 1 ? `${board.title} · Right-click for board actions` : board.title}>
+      aria-keyshortcuts={board.role === 1 || board.canEdit ? "Shift+F10" : undefined}
+      title={board.role === 1 || board.canEdit ? `${board.title} · Right-click for board actions` : board.title}>
       <span className="wk-board-dot" aria-hidden="true" /><span className="wk-board-link-title">{board.title}</span>{(chatUnread.get(board.id) ?? 0) > 0 && <span className="wk-nav-badge" aria-label={`${chatUnread.get(board.id)} unread chat messages`}>{chatUnread.get(board.id)! > 99 ? "99+" : chatUnread.get(board.id)}</span>}
     </button>
   );
@@ -104,8 +131,8 @@ export function Sidebar({
   return <aside className={`wk-sidebar${collapsed ? " wk-sidebar--collapsed" : ""}`}>
     <div className="wk-sidebar-header">
       <button className="wk-sidebar-brand" onClick={() => navigate("/home")} aria-label="Wukna home">
-        <span className="wk-sidebar-monogram" aria-hidden="true">W</span>
-        <span className="wk-sidebar-brand-copy"><strong>Wukna</strong><small>Personal workspace</small></span>
+        <BrandMark motion="welcome" />
+        <span className="wk-sidebar-brand-copy"><strong>wukna</strong><small>Personal workspace</small></span>
       </button>
       <IconButton label={collapsed ? "Expand sidebar" : "Collapse sidebar"} aria-expanded={!collapsed} onClick={onToggle}>
         {collapsed ? <PanelLeftOpen size={17} aria-hidden="true" /> : <PanelLeftClose size={17} aria-hidden="true" />}
@@ -113,20 +140,22 @@ export function Sidebar({
     </div>
 
     <div className="wk-sidebar-utilities">
-      <Button className="wk-sidebar-new" size="compact" onClick={() => setCreating(true)}><Plus size={15} aria-hidden="true" /><span>New board</span></Button>
-      <label className="wk-sidebar-search">
+      <Button className="wk-sidebar-new" size="compact" aria-label="New board" title={collapsed ? 'New board' : undefined} onClick={() => setCreating(true)}><Plus size={15} aria-hidden="true" /><span>New board</span></Button>
+      <div className="wk-sidebar-search">
         <Search size={14} aria-hidden="true" />
-        <input ref={searchRef} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search boards" aria-label="Search boards" />
-        <kbd>⌘ K</kbd>
-      </label>
+        <SearchInput ref={searchRef} value={search} onValueChange={setSearch} clearLabel="Clear board search" placeholder="Search boards" aria-label="Search boards" />
+      </div>
     </div>
 
     <nav data-tour="navigation" className="wk-sidebar-nav" aria-label="Primary navigation">
+      <div className="wk-sidebar-scroll">
       <div className="wk-sidebar-primary-links">
-        {links.map(({ label, icon: Icon, target, tour, active }) => <button key={target} data-tour={tour}
-          className={`wk-shell-link${active ? " wk-shell-link--active" : ""}`}
-          aria-current={active ? "page" : undefined} aria-label={target === "/notifications" && unread ? `${label}, ${unread} unread` : label} title={label}
-          onClick={() => navigate(target)}><Icon size={16} aria-hidden="true" /><span>{label}</span>{target === "/notifications" && unread > 0 && <span className="wk-nav-badge" aria-hidden="true">{unread > 99 ? "99+" : unread}</span>}</button>)}
+        {links.filter(link => !libraryStorage || link.target !== '/notifications').map(destination => <Fragment key={destination.target}>
+          {destinationButton(destination)}
+          {destination.target === '/library' && <div id="wk-sidebar-library-sections" className="wk-sidebar-library-slot" data-open={!collapsed && libraryExpanded} inert={collapsed || !libraryExpanded} aria-hidden={collapsed || !libraryExpanded}>
+            <div className="wk-sidebar-library-inner">{libraryNavigation}</div>
+          </div>}
+        </Fragment>)}
       </div>
       <div className="wk-sidebar-boards">
         <p>Your boards</p>
@@ -137,6 +166,11 @@ export function Sidebar({
           {search && visibleBoards.length === 0 && <p className="wk-sidebar-search-empty">No matching boards</p>}
         </div>
       </div>
+      </div>
+      {libraryStorage && <div className="wk-sidebar-bottom">
+        {destinationButton(links[links.length - 1])}
+        {libraryStorage}
+      </div>}
     </nav>
 
     <div className="wk-sidebar-account-area">
@@ -155,7 +189,7 @@ export function Sidebar({
           <Button variant="secondary" disabled={createBusy} onClick={() => setCreating(false)}>Cancel</Button></div>
       </form>
     </Dialog>}
-    {actionTarget && <BoardActionsDialog key={actionTarget.id} board={actionTarget}
-      onClose={() => setActionTarget(null)} onRenameBoard={onRenameBoard} onDeleteBoard={onDeleteBoard} />}
+    {actionBoard && <BoardActionsDialog key={actionBoard.id} board={actionBoard}
+      onClose={() => setActionTarget(null)} onRenameBoard={onRenameBoard} onDeleteBoard={onDeleteBoard} onColorBoard={onColorBoard} />}
   </aside>;
 }

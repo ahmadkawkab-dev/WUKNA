@@ -3,6 +3,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- CI supplies the complete issued license privately; local builds may use the ignored sixlabors.lic. -->
+    <SixLaborsLicenseKey Condition="'$(SixLaborsLicenseKey)' == '' and '$(SIXLABORS_LICENSE_KEY)' != ''">$(SIXLABORS_LICENSE_KEY)</SixLaborsLicenseKey>
     <!-- NuGet.org advisory outages should warn without failing restore; package vulnerability warnings remain errors. -->
     <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1900</WarningsNotAsErrors>
   </PropertyGroup>

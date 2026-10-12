@@ -1,0 +1,188 @@
+{
+  "cases": [
+    {
+      "url": "/home",
+      "label": "Search boards",
+      "width": 1440,
+      "target": {
+        "left": 170,
+        "right": 206,
+        "top": 122.78125,
+        "bottom": 150.78125,
+        "width": 36,
+        "height": 28
+      },
+      "focus": "returned to input"
+    },
+    {
+      "url": "/boards",
+      "label": "Search your boards",
+      "width": 1440,
+      "target": {
+        "left": 594,
+        "right": 630,
+        "top": 109.4375,
+        "bottom": 141.4375,
+        "width": 36,
+        "height": 32
+      },
+      "focus": "returned to input"
+    },
+    {
+      "url": "/tasks/templates",
+      "label": "Search templates",
+      "width": 1440,
+      "target": {
+        "left": 1378,
+        "right": 1414,
+        "top": 104.5,
+        "bottom": 128.5,
+        "width": 36,
+        "height": 24
+      },
+      "focus": "returned to input"
+    },
+    {
+      "url": "/library/pictures",
+      "label": "Search your library",
+      "width": 1440,
+      "target": {
+        "left": 1287,
+        "right": 1323,
+        "top": 32.8125,
+        "bottom": 67.109375,
+        "width": 36,
+        "height": 34.296875
+      },
+      "focus": "returned to input"
+    },
+    {
+      "url": "/library/pictures",
+      "label": "Filter Library items",
+      "width": 1440,
+      "target": {
+        "left": 607,
+        "right": 643,
+        "top": 268.921875,
+        "bottom": 305.21875,
+        "width": 36,
+        "height": 36.296875
+      },
+      "focus": "returned to input"
+    },
+    {
+      "url": "/library/search",
+      "label": "Search Library",
+      "width": 1440,
+      "target": {
+        "left": 752,
+        "right": 788,
+        "top": 223.921875,
+        "bottom": 265.921875,
+        "width": 36,
+        "height": 42
+      },
+      "focus": "returned to input"
+    },
+    {
+      "url": "/dev/journal",
+      "label": "Search sample entries",
+      "width": 1440,
+      "target": {
+        "left": 834,
+        "right": 870,
+        "top": 255.171875,
+        "bottom": 295.171875,
+        "width": 36,
+        "height": 40
+      },
+      "focus": "returned to input"
+    },
+    {
+      "url": "/boards",
+      "label": "Search your boards",
+      "width": 375,
+      "target": {
+        "left": 309,
+        "right": 345,
+        "top": 213.4375,
+        "bottom": 253.4375,
+        "width": 36,
+        "height": 40
+      },
+      "focus": "returned to input"
+    },
+    {
+      "url": "/tasks/templates",
+      "label": "Search templates",
+      "width": 375,
+      "target": {
+        "left": 313,
+        "right": 349,
+        "top": 206.890625,
+        "bottom": 230.890625,
+        "width": 36,
+        "height": 24
+      },
+      "focus": "returned to input"
+    },
+    {
+      "url": "/library/pictures",
+      "label": "Search your library",
+      "width": 375,
+      "target": {
+        "left": 234,
+        "right": 270,
+        "top": 149.9375,
+        "bottom": 191.9375,
+        "width": 36,
+        "height": 42
+      },
+      "focus": "returned to input"
+    },
+    {
+      "url": "/library/pictures",
+      "label": "Filter Library items",
+      "width": 375,
+      "target": {
+        "left": 322,
+        "right": 358,
+        "top": 505.3125,
+        "bottom": 547.3125,
+        "width": 36,
+        "height": 42
+      },
+      "focus": "returned to input"
+    },
+    {
+      "url": "/library/search",
+      "label": "Search Library",
+      "width": 375,
+      "target": {
+        "left": 322,
+        "right": 358,
+        "top": 344.21875,
+        "bottom": 386.21875,
+        "width": 36,
+        "height": 42
+      },
+      "focus": "returned to input"
+    },
+    {
+      "url": "/dev/journal",
+      "label": "Search sample entries",
+      "width": 375,
+      "target": {
+        "left": 309,
+        "right": 345,
+        "top": 291.46875,
+        "bottom": 331.46875,
+        "width": 36,
+        "height": 40
+      },
+      "focus": "returned to input"
+    }
+  ],
+  "sidebarShortcut": "passed",
+  "browserErrors": []
+}

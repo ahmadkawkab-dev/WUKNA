@@ -77,9 +77,9 @@
   text-decoration: none;
 }
 .wk-public-button-primary { color: var(--primary-foreground); background: var(--primary); border-color: var(--primary); }
-.wk-public-button-primary:hover { background: color-mix(in srgb, var(--primary) 90%, var(--foreground)); }
+@media (hover: hover) { .wk-public-button-primary:hover { background: color-mix(in srgb, var(--primary) 90%, var(--foreground)); } }
 .wk-public-button-secondary { color: var(--foreground); background: var(--surface); }
-.wk-public-button-secondary:hover { background: var(--hover); }
+@media (hover: hover) { .wk-public-button-secondary:hover { background: var(--hover); } }
 .wk-public-home-note {
   max-width: 38rem;
   margin: var(--space-10) auto 0;

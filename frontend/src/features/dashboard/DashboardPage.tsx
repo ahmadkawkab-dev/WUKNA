@@ -6,6 +6,7 @@ import type { AuthSession } from "../../auth";
 import { Button } from "../../components/ui/Button";
 import { addDays, dateInZone } from "../../date";
 import { taskWritePayload } from "../tasks/taskView";
+import { boardCardTone } from "../boards/boardCardTone";
 import "./dashboard.css";
 
 type Snapshot = {
@@ -119,6 +120,7 @@ export function DashboardPage({ user, boards, boardsLoading, boardsError, retryB
       <div><p className="wk-dashboard-eyebrow">{dateLabel(today)}</p>
         <h1 id="wk-dashboard-title">Hello, {name}</h1>
         <p>A calm plan for the work that matters.</p></div>
+      <Button variant="secondary" size="compact" onClick={() => navigate('/tasks/quick')}><Plus size={14} aria-hidden="true" /> Quick tasks</Button>
     </header>
     <div className="wk-dashboard-body">
       {loading && !snapshot && <LoadingSkeleton layout="dashboard" label="Loading your day…" />}
@@ -142,13 +144,13 @@ export function DashboardPage({ user, boards, boardsLoading, boardsError, retryB
             <div className="wk-dashboard-summary-icon"><LayoutDashboard size={18} aria-hidden="true" /></div>
             <div><strong>{boardsLoading ? "Loading boards…" : boardsError ? "Boards unavailable" : `${boards.length} ${boards.length === 1 ? "board" : "boards"}`}</strong>
               <p>Your spaces for notes and shared work</p>
-              <button onClick={() => navigate("/boards")}>View boards <ArrowRight size={13} aria-hidden="true" /></button></div>
+              </div>
           </div>
           <div className="wk-dashboard-summary-card">
             <div className="wk-dashboard-summary-icon"><CalendarDays size={18} aria-hidden="true" /></div>
             <div><strong>{snapshot.calendarHasMore ? "Upcoming events" : `${upcomingEvents.length} ${upcomingEvents.length === 1 ? "event" : "events"} this week`}</strong>
               <p>{todayEvents.length ? `${todayEvents.length} today` : "No events today"}</p>
-              <button onClick={() => navigate("/calendar")}>Open calendar <ArrowRight size={13} aria-hidden="true" /></button></div>
+              </div>
           </div>
         </div>
         <div className="wk-dashboard-columns">
@@ -156,7 +158,7 @@ export function DashboardPage({ user, boards, boardsLoading, boardsError, retryB
             <section className="wk-dashboard-section" aria-labelledby="wk-dashboard-today">
               <div className="wk-dashboard-section-head"><div><h2 id="wk-dashboard-today">Today</h2>
                 <p>{snapshot.tasksHaveMore ? "More than 50 active tasks due" : `${snapshot.tasks.length} active ${snapshot.tasks.length === 1 ? "task" : "tasks"} due`}</p></div>
-                <Button variant="secondary" size="compact" onClick={() => navigate("/tasks")}><Plus size={14} aria-hidden="true" /> Add task</Button></div>
+                </div>
               {snapshot.tasks.length ? <ul className="wk-dashboard-task-list">
                 {snapshot.tasks.slice(0, 8).map((task) => <li key={task.id}>
                   <button className="wk-dashboard-task-check" disabled={changingId === task.id}
@@ -180,7 +182,7 @@ export function DashboardPage({ user, boards, boardsLoading, boardsError, retryB
               {boardsError ? <div className="wk-dashboard-inline-error" role="alert">{boardsError} <button onClick={retryBoards}>Try again</button></div>
                 : boardsLoading ? <LoadingSkeleton layout="cards" label="Loading boards…" />
                   : recentBoards.length ? <div className="wk-dashboard-board-grid">{recentBoards.map((board) =>
-                    <button key={board.id} onClick={() => navigate(`/boards/${board.id}`)}>
+                    <button key={board.id} data-board-id={board.id} data-board-tone={board.cardColor ?? boardCardTone(board.id)} onClick={() => navigate(`/boards/${board.id}`)}>
                       <LayoutDashboard size={16} aria-hidden="true" /><strong>{board.title}</strong>
                       <small>{board.noteCount} {board.noteCount === 1 ? "note" : "notes"} · {board.memberCount} {board.memberCount === 1 ? "member" : "members"}</small>
                     </button>)}</div>

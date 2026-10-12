@@ -1,10 +1,10 @@
-import { BrandMark } from './BrandMark';
+import { BrandMark, type BrandMotion } from './BrandMark';
 
-export function Wordmark({ arabic = false }: { arabic?: boolean }) {
+export function Wordmark({ arabic = false, motion = 'still' }: { arabic?: boolean; motion?: BrandMotion }) {
   return (
     <div className="wukna-wordmark">
-      <BrandMark className="wukna-mark" />
-      {arabic ? <span lang="ar" dir="rtl">وُكنة</span> : <span>Wukna</span>}
+      <BrandMark className="wukna-mark" motion={motion} />
+      {arabic ? <span lang="ar" dir="rtl">وُكنة</span> : <span>wukna</span>}
     </div>
   );
 }

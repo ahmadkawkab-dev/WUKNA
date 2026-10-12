@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+"""Connect a host-run Development API to the local Library containers."""
+import argparse
+import json
+import os
+from pathlib import Path
+import subprocess
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("directory", help="Existing private directory created by create-library-storage-config")
+args = parser.parse_args()
+repository = Path(__file__).resolve().parent.parent
+directory = Path(args.directory).resolve()
+if directory == repository or repository in directory.parents:
+    parser.error("Choose the private storage configuration outside the repository.")
+environment = dict(line.split("=", 1) for line in (directory / "storage.env").read_text().splitlines() if "=" in line)
+access = environment.get("LIBRARY_S3_ACCESS_KEY", "")
+secret = environment.get("LIBRARY_S3_SECRET_KEY", "")
+if not access or len(secret) < 32:
+    parser.error("The private storage credentials are missing or invalid.")
+os.umask(0o077)
+quarantine = directory / "quarantine"
+quarantine.mkdir(mode=0o700, exist_ok=True)
+quarantine.chmod(0o700)
+settings = {
+    "Library:Storage:Enabled": "true",
+    "Library:Storage:Endpoint": "http://127.0.0.1:18333",
+    "Library:Storage:Bucket": "wukna-library",
+    "Library:Storage:AccessKey": access,
+    "Library:Storage:SecretKey": secret,
+    "Library:Storage:ClamHost": "127.0.0.1",
+    "Library:Storage:ClamPort": "13311",
+    "Library:Storage:QuarantineDirectory": str(quarantine),
+}
+# Merge only these keys; preserve existing development authentication/database secrets.
+# stdin keeps credential values out of command arguments and shared output.
+subprocess.run(["dotnet", "user-secrets", "set", "--project", str(repository / "Wukna.csproj")],
+               input=json.dumps(settings), text=True, check=True, stdout=subprocess.DEVNULL)
+secret_file = Path.home() / ".microsoft/usersecrets/8478114a-6eb8-404d-9715-2cccc23267e4/secrets.json"
+if secret_file.exists():
+    secret_file.chmod(0o600)
+print("Configured local Library storage in .NET user secrets; credential values were not printed. Restart the Development API.")

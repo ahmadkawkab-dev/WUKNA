@@ -1,0 +1,28 @@
+* { box-sizing: border-box; }
+body { margin: 0; color: var(--foreground); background: var(--background); font: 14px/1.5 'Instrument Sans', sans-serif; }
+main { max-width: 1056px; margin: auto; padding: 24px 32px 32px; }
+.preview-header { display:flex; align-items:center; justify-content:space-between; gap:16px; color:var(--muted-foreground); font-size:12px; }
+.preview-header a { font-size:24px; font-weight:600; letter-spacing:-.04em; color:var(--foreground); text-decoration:none; }
+.preview-intro { margin: 32px 0 24px; }
+h1 { margin:0 0 8px; font-size:clamp(24px,4vw,32px); font-weight:600; letter-spacing:-.03em; line-height:1.2; }
+.preview-intro p { margin:0; color:var(--muted-foreground); max-width:42rem; }
+.preview-stage { min-height:440px; display:grid; place-items:center; padding:48px 20px; border:1px solid var(--border); border-radius:12px; background:var(--surface); }
+.preview-lockup { display:grid; justify-items:center; gap:20px; width:100%; }
+#prism-mark { width:clamp(180px,40vw,320px); height:auto; pointer-events:none; }
+.preview-wordmark { font-size:40px; font-weight:600; line-height:1; letter-spacing:-.04em; }
+.preview-lockup p { margin:4px 0 0; color:var(--muted-foreground); font-size:14px; }
+.preview-controls { padding:24px 0 0; }
+.preview-settings { display:flex; gap:12px; align-items:end; flex-wrap:wrap; }
+.preview-settings label { display:grid; gap:6px; font-size:12px; }
+select,button { font:inherit; min-height:38px; padding:8px 12px; color:var(--foreground); border:1px solid var(--border); border-radius:6px; background:var(--surface); }
+button { cursor:pointer; }
+button:disabled { opacity:.5; cursor:default; }
+button:hover:not(:disabled) { background:var(--hover); }
+:focus-visible { outline:2px solid var(--primary); outline-offset:3px; }
+.preview-timeline { display:grid; grid-template-columns:auto 1fr 110px; gap:16px; align-items:center; margin-top:20px; font-size:12px; }
+input[type=range] { width:100%; accent-color:var(--primary); }
+#phase { text-align:right; color:var(--muted-foreground); }
+.preview-reduce { display:flex; gap:8px; align-items:center; margin-top:16px; font-size:12px; }
+input[type=checkbox] { accent-color:var(--primary); }
+#preview-note { margin:12px 0 0; color:var(--muted-foreground); font-size:12px; }
+@media(max-width:600px) { main { padding:20px; } .preview-header span { font-size:11px; } .preview-intro { margin-top:28px; } .preview-stage { min-height:360px; } .preview-timeline { grid-template-columns:1fr auto; gap:8px; } .preview-timeline input { grid-column:1/-1; grid-row:2; } .preview-settings label { flex:1; min-width:135px; } }

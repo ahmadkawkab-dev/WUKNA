@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="90 150 425 300" role="img" aria-label="Wukna folded W"><style>:root{--primary:#486653;--foreground:#171815;--surface:#ffffff;
+  --brand-left-front: var(--primary);
+  --brand-left-return: color-mix(in srgb, var(--primary) 35%, var(--foreground));
+  --brand-left-inner: color-mix(in srgb, var(--primary) 75%, var(--foreground));
+  --brand-right-inner: color-mix(in srgb, var(--primary) 22%, var(--surface));
+  --brand-right-fold: color-mix(in srgb, var(--primary) 58%, var(--surface));
+  --brand-right-front: color-mix(in srgb, var(--primary) 85%, var(--foreground));
+  --brand-right-return: color-mix(in srgb, var(--primary) 15%, var(--foreground));
+  --brand-foot: color-mix(in srgb, var(--primary) 40%, var(--surface));
+}[data-brand-face='left-front']{fill:var(--brand-left-front)}[data-brand-face='left-return']{fill:var(--brand-left-return)}[data-brand-face='left-inner']{fill:var(--brand-left-inner)}[data-brand-face='right-inner']{fill:var(--brand-right-inner)}[data-brand-face='right-fold']{fill:var(--brand-right-fold)}[data-brand-face='right-front']{fill:var(--brand-right-front)}[data-brand-face='right-return']{fill:var(--brand-right-return)}[data-brand-face='foot']{fill:var(--brand-foot)}@media(prefers-color-scheme:dark){:root{--primary:#a5c0aa;--foreground:#f5f6f2;--surface:#202620;}}</style><path data-brand-face="left-front" d="M103 159 L198 204 L255 308 L184 442 L95 168 Q91 155 103 159 Z"/><path data-brand-face="left-return" d="M184 442 L255 308 L300 391 Z"/><path data-brand-face="left-inner" d="M255 308 L300 247 L300 391 Z"/><path data-brand-face="right-inner" d="M300 247 L347 309 L300 391 Z"/><path data-brand-face="right-fold" d="M347 309 L404 204 L402 350 L300 391 Z"/><path data-brand-face="right-front" d="M404 204 L495 159 Q510 154 505 170 L415 442 L402 350 Z"/><path data-brand-face="right-return" d="M300 391 L402 350 L415 442 Z"/><path data-brand-face="foot" d="M300 391 L415 442 L331 442 Z"/></svg>
