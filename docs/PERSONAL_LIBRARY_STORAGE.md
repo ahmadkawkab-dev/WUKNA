@@ -164,6 +164,13 @@ no host port. Application credentials permit Read/Write only within
 access. Administrators initialize the bucket through local `docker exec`.
 The API has no bucket-administration route.
 
+Production Library reuses the `clamd` definition from
+`compose.attachments.production.yaml`: the pinned ARM64 image,
+`clamav_signatures_prod` volume, and scanner networks remain the same as Chat.
+Its API joins `scanner_private` as well as `library_private`, so both features
+reach the same scanner. Combine the base, Chat attachment, and Library overrides
+when enabling both features. The development scanner defaults remain separate.
+
 Generate configuration outside the repository (the script refuses to overwrite
 existing credentials or print their values):
 

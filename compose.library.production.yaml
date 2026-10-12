@@ -13,16 +13,19 @@ services:
     depends_on:
       seaweedfs: {condition: service_healthy}
       clamd: {condition: service_healthy}
-    networks: [data, edge, library_private]
+    networks: [data, edge, library_private, scanner_private]
     volumes: [library_quarantine:/app/App_Data/library-quarantine]
   seaweedfs:
     extends: {file: compose.library.services.yaml, service: seaweedfs}
   clamd:
-    extends: {file: compose.library.services.yaml, service: clamd}
+    # Reuse Chat's ARM64 scanner configuration and existing signatures volume.
+    # Do not apply development scanner defaults to the production service.
+    extends: {file: compose.attachments.production.yaml, service: clamd}
 networks:
   library_private: {internal: true}
-  library_scanner_egress: {}
+  scanner_private: {internal: true}
+  scanner_egress: {}
 volumes:
   library_objects: {}
   library_quarantine: {}
-  library_clam_signatures: {}
+  clamav_signatures_prod: {}
