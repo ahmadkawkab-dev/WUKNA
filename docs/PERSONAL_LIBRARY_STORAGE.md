@@ -209,9 +209,22 @@ EOF
 
 Apply the already reviewed Library migrations to the selected development
 database before starting its API/frontend. Starting the overrides does not run
-database migrations. For production, keep generated JSON and `storage.env`
-root-owned and 0600 under `/etc/wukna/library-storage`, following the existing
-root-owned production environment-file approach. Use `compose.production.yaml`
+database migrations. For production, keep `/etc/wukna/library-storage` root-owned
+and 0700 and `storage.env` root-owned and 0600. The pinned SeaweedFS image drops
+privileges to `seaweed` (UID/GID 1000), even though Docker reports its configured
+user as root. Its read-only JSON bind therefore needs root ownership, group 1000,
+and mode 0640. Generate a new production configuration with:
+
+```bash
+sudo ops/create-library-storage-config --reader-gid 1000 /etc/wukna/library-storage
+```
+
+The helper preserves the private directory and environment-file permissions and
+refuses to overwrite existing credentials. For an existing root-only JSON,
+change only its group to the image's SeaweedFS group and mode to 0640; preserve
+the credentials and storage volume. Recheck the image's group when updating its
+digest. The root-only host directory prevents ordinary host users from traversing
+to the JSON. Use `compose.production.yaml`
 with `compose.library.production.yaml` and both private environment files only
 after explicit deployment approval. Never run `compose config` without `--quiet`
 in shared logs because resolved environment values include credentials.
