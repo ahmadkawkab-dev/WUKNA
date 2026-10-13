@@ -48,7 +48,7 @@ export function AuthScreen({ mode, error: initialError, onSuccess, navigate }: {
   return (
     <main className="wk-auth">
       <header className="wk-auth-header">
-        <Wordmark />
+        <Wordmark motion="welcome" />
         <span className="wk-arabic" lang="ar" dir="rtl">وُكنة</span>
       </header>
       <section className="wk-auth-content" aria-labelledby="auth-title">

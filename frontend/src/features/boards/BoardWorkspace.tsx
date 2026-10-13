@@ -7,6 +7,7 @@ import {
   useSyncExternalStore,
   type PointerEvent as Pointer,
 } from "react";
+import { BrandState } from '../../components/brand/BrandState';
 import {
   ArrowLeft,
   Link2,
@@ -485,7 +486,9 @@ function WorkspaceContent({
         setBoard((current) => current &&
           Date.parse(current.updatedAt) > Date.parse(message.updatedAt)
           ? current
-          : current && { ...current, title: message.title, updatedAt: message.updatedAt });
+          : current && { ...current, title: message.title, updatedAt: message.updatedAt,
+            ...((message.cardColorVersion ?? 0) >= (current.cardColorVersion ?? 0)
+              ? { cardColor: message.cardColor, cardColorVersion: message.cardColorVersion } : {}) });
       }),
       realtimeConnection.on<BoardScopedEvent>(realtimeEvents.membersChanged, (message) => {
         if (message.boardId !== id) return;
@@ -924,7 +927,7 @@ function WorkspaceContent({
     };
   }, [viewport.controller, editorNavigation.inspectorNoteId]);
   return (
-    <div className="workspace">
+    <div className="workspace" data-board-id={id}>
       <CollaborationAnnouncements
         editing={remoteEditing}
         members={members}
@@ -938,22 +941,17 @@ function WorkspaceContent({
             <ArrowLeft size={18} aria-hidden="true" /> Boards
           </Button>
           <span className="divider" />
-          <h1>{titleOverride ?? board?.title ?? "Board"}</h1>
+          <div className="board-title-group">
+            <span className="board-eyebrow">Boards{board ? ` / ${board.role === 1 ? 'Owner' : editable ? 'Editor' : 'Viewer'}` : ''}</span>
+            <h1>{titleOverride ?? board?.title ?? "Board"}</h1>
+            {board && <p>{visualTop.length} {visualTop.length === 1 ? 'note' : 'notes'}</p>}
+          </div>
         </div>
         <div className="board-actions">
           <RealtimeHealth status={realtimeStatus} />
-          <BoardPresence
-            snapshot={presence}
-            members={members}
-            available={realtimeStatus === "connected"}
-          />
-          {board && (
-            <span className="permission-label">
-              {board.role === 1 ? "Owner" : editable ? "Editor" : "Viewer"}
-            </span>
-          )}
+          <BoardPresence snapshot={presence} members={members} available={realtimeStatus === 'connected'} />
           <Button
-            variant="secondary"
+            variant="primary"
             disabled={!board}
             onClick={() => {
               const next = panel === "share" ? null : "share";
@@ -961,12 +959,12 @@ function WorkspaceContent({
               setPanel(next);
             }}
           >
-            <Share2 size={18} aria-hidden="true" /> Share
+            <Share2 size={14} aria-hidden="true" /> Share
           </Button>
         </div>
       </header>
       {loading ? (
-        <div className="workspace-state" data-tour-loading="true">Loading board…</div>
+        <div className="workspace-state" data-tour-loading="true"><BrandState label="Loading board…" /></div>
       ) : failure ? (
         <div className="workspace-state">
           <h2>Board unavailable</h2>
@@ -1008,7 +1006,7 @@ function WorkspaceContent({
             {editable && selectedEdgeId && <Button variant="secondary" size="compact" onClick={() => setEditingEdgeId(selectedEdgeId)}>Edit connection</Button>}
             <span className="tool-rule" />
             <Button variant="secondary" size="compact" className="board-tool-button"
-              aria-label="Tasks"
+              aria-label="Board tasks"
               aria-pressed={panel === "tasks"}
               onClick={() => {
                 const next = panel === "tasks" ? null : "tasks";
@@ -1016,7 +1014,7 @@ function WorkspaceContent({
                 setPanel(next);
               }}
             >
-              <ListChecks size={16} aria-hidden="true" /><span>Tasks</span>
+              <ListChecks size={16} aria-hidden="true" /><span>Board tasks</span>
             </Button>
             <ChatWorkspace boardId={id} userId={currentUserId} boardTitle={board?.title ?? "Board"} host={chatHost} />
           </div>
@@ -1111,14 +1109,8 @@ function WorkspaceContent({
               <div className="canvas-empty" role="status">
                 <h2>{editable ? "Start with a note" : "No notes yet"}</h2>
                 <p>{editable
-                  ? "Capture an idea here, then add a task list when you're ready."
+                  ? "Choose Note or Task list in the toolbar below to get started."
                   : "This board is waiting for its first idea."}</p>
-                {editable && (
-                  <Button className="canvas-empty-add-note" onClick={() => void create(0)}>
-                    <Plus size={18} aria-hidden="true" />
-                    <span>Add note</span>
-                  </Button>
-                )}
               </div>
             )}
           </div>

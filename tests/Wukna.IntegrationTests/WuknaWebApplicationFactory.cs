@@ -22,6 +22,11 @@ public class WuknaWebApplicationFactory(
         // realtime tests explicitly enable polling or drive the dispatcher.
         builder.UseSetting("Chat:Outbox:Enabled", "false");
         builder.UseSetting("Notifications:WorkerEnabled", "false");
+        builder.UseSetting("Library:ReservationCleanupEnabled", "false");
+        // Do not inherit a contributor's live development storage or background worker.
+        // Storage-specific factories explicitly opt in to their controlled fixtures.
+        builder.UseSetting("Library:Storage:Enabled", "false");
+        builder.UseSetting("Library:Storage:WorkerEnabled", "false");
         builder.UseSetting("Jwt:Issuer", JwtIssuer);
         builder.UseSetting("Jwt:Audience", JwtAudience);
         builder.UseSetting("Jwt:SigningKey", JwtSigningKey);

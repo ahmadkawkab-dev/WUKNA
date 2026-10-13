@@ -20,5 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../Wukna.csproj" />
+    <None Include="../../ops/migrations/2026-10-13-library-release.sql"
+          Link="release/library-release.sql" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

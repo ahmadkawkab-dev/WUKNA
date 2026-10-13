@@ -1,0 +1,74 @@
+{
+  "results": [
+    {
+      "width": 375,
+      "reducedMotion": "no-preference",
+      "motionConcepts": 6,
+      "themes": 2,
+      "palettes": 7,
+      "noOverflow": true,
+      "noApiRequests": true,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "width": 375,
+      "reducedMotion": "reduce",
+      "motionConcepts": 6,
+      "themes": 2,
+      "palettes": 7,
+      "noOverflow": true,
+      "noApiRequests": true,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "width": 768,
+      "reducedMotion": "no-preference",
+      "motionConcepts": 6,
+      "themes": 2,
+      "palettes": 7,
+      "noOverflow": true,
+      "noApiRequests": true,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "width": 768,
+      "reducedMotion": "reduce",
+      "motionConcepts": 6,
+      "themes": 2,
+      "palettes": 7,
+      "noOverflow": true,
+      "noApiRequests": true,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "width": 1440,
+      "reducedMotion": "no-preference",
+      "motionConcepts": 6,
+      "themes": 2,
+      "palettes": 7,
+      "noOverflow": true,
+      "noApiRequests": true,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "width": 1440,
+      "reducedMotion": "reduce",
+      "motionConcepts": 6,
+      "themes": 2,
+      "palettes": 7,
+      "noOverflow": true,
+      "noApiRequests": true,
+      "errors": [],
+      "failures": []
+    }
+  ],
+  "liveReducedMotion": true,
+  "oneShotEnds": true,
+  "fixedStageGeometry": true,
+  "unmountCancels": true
+}

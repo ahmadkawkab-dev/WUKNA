@@ -19,7 +19,7 @@ function worker(binding) {
     registration: { async showNotification(title, options) { shown.push({ title, options }); } },
     clients: { async matchAll() { return [{ url: 'https://wukna.test/home', postMessage(data) { posted.push(data); }, async navigate(path) { navigated.push(path); }, async focus() {} }]; }, async openWindow(path) { navigated.push(path); } },
   };
-  vm.runInNewContext(source, { self, indexedDB, URL, Date, Number });
+  vm.runInNewContext(source, { self, indexedDB, URL, Date, Number, importScripts: path => assert.equal(path, '/library-share-worker.js') });
   const dispatch = (name, data) => new Promise((resolve, reject) => { handlers[name]({ ...data, waitUntil(promise) { promise.then(resolve, reject); } }); });
   return { shown, navigated, posted, dispatch, stores };
 }

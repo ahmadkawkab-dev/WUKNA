@@ -203,6 +203,17 @@ namespace Wukna.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("CardColor")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("card_color");
+
+                    b.Property<int>("CardColorVersion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("card_color_version");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -227,7 +238,12 @@ namespace Wukna.Migrations
                     b.HasIndex("Title")
                         .HasDatabaseName("ix_boards_title");
 
-                    b.ToTable("boards", (string)null);
+                    b.ToTable("boards", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_boards_card_color", "card_color IS NULL OR card_color IN ('sage', 'blue', 'lavender', 'clay', 'gold', 'rose')");
+
+                            t.HasCheckConstraint("ck_boards_card_color_version", "card_color_version >= 0");
+                        });
                 });
 
             modelBuilder.Entity("Wukna.Features.Board.BoardMembership", b =>
@@ -900,6 +916,831 @@ namespace Wukna.Migrations
                             t.HasCheckConstraint("ck_scheduled_chat_task_title", "length(btrim(title)) > 0");
 
                             t.HasCheckConstraint("ck_scheduled_chat_task_zone", "length(btrim(time_zone_id)) > 0");
+                        });
+                });
+
+            modelBuilder.Entity("Wukna.Features.Library.LibraryAsset", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("integer")
+                        .HasColumnName("category");
+
+                    b.Property<string>("Checksum")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("checksum");
+
+                    b.Property<string>("ContentType")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("content_type");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<int?>("Height")
+                        .HasColumnType("integer")
+                        .HasColumnName("height");
+
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("item_id");
+
+                    b.Property<string>("LastErrorCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("last_error_code");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("original_file_name");
+
+                    b.Property<string>("OriginalStorageKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("original_storage_key");
+
+                    b.Property<int>("ProcessingStatus")
+                        .HasColumnType("integer")
+                        .HasColumnName("processing_status");
+
+                    b.Property<int?>("ScanVerdict")
+                        .HasColumnType("integer")
+                        .HasColumnName("scan_verdict");
+
+                    b.Property<DateTimeOffset?>("ScannedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("scanned_at");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("size_bytes");
+
+                    b.Property<long>("StoredBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("stored_bytes");
+
+                    b.Property<long>("ThumbnailBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("thumbnail_bytes");
+
+                    b.Property<string>("ThumbnailStorageKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("thumbnail_storage_key");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<DateTimeOffset?>("VerifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("verified_at");
+
+                    b.Property<int?>("Width")
+                        .HasColumnType("integer")
+                        .HasColumnName("width");
+
+                    b.HasKey("Id")
+                        .HasName("pk_library_assets");
+
+                    b.HasAlternateKey("ItemId", "UserId", "Category")
+                        .HasName("ak_library_assets_item_id_user_id_category");
+
+                    b.HasIndex("OriginalStorageKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_library_assets_original_storage_key")
+                        .HasFilter("original_storage_key IS NOT NULL");
+
+                    b.HasIndex("ThumbnailStorageKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_library_assets_thumbnail_storage_key")
+                        .HasFilter("thumbnail_storage_key IS NOT NULL");
+
+                    b.HasIndex("UserId", "SizeBytes", "Id")
+                        .HasDatabaseName("ix_library_assets_user_id_size_bytes_id");
+
+                    b.ToTable("library_assets", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_library_asset_available", "processing_status <> 3 OR (verified_at IS NOT NULL AND scanned_at IS NOT NULL AND scan_verdict IS NOT NULL AND scan_verdict = 0\n    AND original_storage_key LIKE 'library/available/%'\n    AND (thumbnail_storage_key IS NULL OR thumbnail_storage_key LIKE 'library/available/%')\n    AND (category <> 0 OR (width IS NOT NULL AND height IS NOT NULL AND thumbnail_storage_key IS NOT NULL)))");
+
+                            t.HasCheckConstraint("ck_library_asset_category", "category IN (0, 1)");
+
+                            t.HasCheckConstraint("ck_library_asset_checksum", "checksum IS NULL OR checksum ~ '^[0-9a-f]{64}$'");
+
+                            t.HasCheckConstraint("ck_library_asset_dates", "updated_at >= created_at AND (verified_at IS NULL OR verified_at >= created_at)");
+
+                            t.HasCheckConstraint("ck_library_asset_dimensions", "(width IS NULL AND height IS NULL) OR (category = 0 AND width > 0 AND height > 0 AND width IS NOT NULL AND height IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_library_asset_filename", "char_length(btrim(original_file_name)) > 0 AND original_file_name !~ '[[:cntrl:]/\\\\]'");
+
+                            t.HasCheckConstraint("ck_library_asset_keys", "(original_storage_key IS NULL OR original_storage_key ~ '^library/(quarantine|available)/[0-9a-f]{32}$')\nAND (thumbnail_storage_key IS NULL OR thumbnail_storage_key ~ '^library/(quarantine|available)/[0-9a-f]{32}$')\nAND (thumbnail_storage_key IS NULL) = (thumbnail_bytes = 0)\nAND (thumbnail_storage_key IS NULL OR thumbnail_storage_key <> original_storage_key)");
+
+                            t.HasCheckConstraint("ck_library_asset_scan", "(scan_verdict IS NULL AND scanned_at IS NULL) OR\n(scan_verdict IS NOT NULL AND scan_verdict IN (0, 1) AND scanned_at IS NOT NULL AND verified_at IS NOT NULL\n    AND scanned_at >= verified_at AND (scan_verdict = 0 OR processing_status = 4))");
+
+                            t.HasCheckConstraint("ck_library_asset_sizes", "size_bytes >= 0 AND thumbnail_bytes >= 0 AND stored_bytes >= size_bytes AND stored_bytes - size_bytes >= thumbnail_bytes");
+
+                            t.HasCheckConstraint("ck_library_asset_status", "processing_status IN (0, 1, 2, 3, 4)");
+
+                            t.HasCheckConstraint("ck_library_asset_verified", "verified_at IS NULL OR (size_bytes > 0 AND content_type IS NOT NULL AND char_length(content_type) > 0 AND checksum IS NOT NULL AND original_storage_key IS NOT NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("Wukna.Features.Library.LibraryBlobWork", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("AssetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("asset_id");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("attempts");
+
+                    b.Property<long>("ChargedBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("charged_bytes");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<DateTimeOffset>("DueAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("due_at");
+
+                    b.Property<string>("LastErrorCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("last_error_code");
+
+                    b.Property<DateTimeOffset?>("LeaseExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("lease_expires_at");
+
+                    b.Property<Guid?>("LeaseToken")
+                        .HasColumnType("uuid")
+                        .HasColumnName("lease_token");
+
+                    b.Property<string>("ObjectKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("object_key");
+
+                    b.Property<int>("Purpose")
+                        .HasColumnType("integer")
+                        .HasColumnName("purpose");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_library_blob_work");
+
+                    b.HasIndex("DueAt", "Id")
+                        .HasDatabaseName("ix_library_blob_work_due_at_id");
+
+                    b.HasIndex("Purpose", "ObjectKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_library_blob_work_purpose_object_key");
+
+                    b.HasIndex("UserId", "Purpose")
+                        .HasDatabaseName("ix_library_blob_work_user_id_purpose");
+
+                    b.ToTable("library_blob_work", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_library_blob_work_counters", "charged_bytes >= 0 AND attempts >= 0");
+
+                            t.HasCheckConstraint("ck_library_blob_work_dates", "due_at >= created_at");
+
+                            t.HasCheckConstraint("ck_library_blob_work_identity", "user_id <> '00000000-0000-0000-0000-000000000000' AND (asset_id IS NULL OR asset_id <> '00000000-0000-0000-0000-000000000000')");
+
+                            t.HasCheckConstraint("ck_library_blob_work_key", "object_key ~ '^library/(quarantine|available)/[0-9a-f]{32}$'");
+
+                            t.HasCheckConstraint("ck_library_blob_work_lease", "(lease_token IS NULL AND lease_expires_at IS NULL) OR\n(lease_token IS NOT NULL AND lease_token <> '00000000-0000-0000-0000-000000000000'\n    AND lease_expires_at IS NOT NULL AND lease_expires_at > created_at)");
+
+                            t.HasCheckConstraint("ck_library_blob_work_purpose", "purpose IN (0, 1)");
+
+                            t.HasCheckConstraint("ck_library_blob_work_scan", "purpose <> 0 OR (asset_id IS NOT NULL AND charged_bytes = 0 AND object_key LIKE 'library/quarantine/%')");
+                        });
+                });
+
+            modelBuilder.Entity("Wukna.Features.Library.LibraryCollection", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("name");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_library_collections");
+
+                    b.HasAlternateKey("Id", "UserId")
+                        .HasName("ak_library_collections_id_user_id");
+
+                    b.HasIndex("UserId", "CreatedAt", "Id")
+                        .HasDatabaseName("ix_library_collections_user_id_created_at_id");
+
+                    b.ToTable("library_collections", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_library_collection_dates", "updated_at >= created_at");
+
+                            t.HasCheckConstraint("ck_library_collection_name", "char_length(btrim(name)) > 0 AND name !~ '[[:cntrl:]]'");
+                        });
+                });
+
+            modelBuilder.Entity("Wukna.Features.Library.LibraryCollectionItem", b =>
+                {
+                    b.Property<Guid>("CollectionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("collection_id");
+
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("item_id");
+
+                    b.Property<DateTimeOffset>("AddedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("added_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("CollectionId", "ItemId")
+                        .HasName("pk_library_collection_items");
+
+                    b.HasIndex("CollectionId", "UserId")
+                        .HasDatabaseName("ix_library_collection_items_collection_id_user_id");
+
+                    b.HasIndex("ItemId", "UserId")
+                        .HasDatabaseName("ix_library_collection_items_item_id_user_id");
+
+                    b.ToTable("library_collection_items", (string)null);
+                });
+
+            modelBuilder.Entity("Wukna.Features.Library.LibraryDocument", b =>
+                {
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("item_id");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("integer")
+                        .HasColumnName("category");
+
+                    b.Property<string>("Encoding")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("encoding");
+
+                    b.Property<string>("Language")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("language");
+
+                    b.Property<int>("PreviewKind")
+                        .HasColumnType("integer")
+                        .HasColumnName("preview_kind");
+
+                    b.Property<string>("SourceText")
+                        .HasColumnType("text")
+                        .HasColumnName("source_text");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("ItemId")
+                        .HasName("pk_library_documents");
+
+                    b.HasIndex("ItemId", "UserId", "Category")
+                        .IsUnique()
+                        .HasDatabaseName("ix_library_documents_item_id_user_id_category");
+
+                    b.ToTable("library_documents", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_library_document_category", "category = 1");
+
+                            t.HasCheckConstraint("ck_library_document_kind", "preview_kind IN (0, 1, 2, 3)");
+
+                            t.HasCheckConstraint("ck_library_document_language", "(preview_kind = 1 AND language IS NOT NULL AND language IN\n    ('csharp','typescript','javascript','tsx','jsx','css','html','python','sql','json','bash','plaintext'))\nOR (preview_kind <> 1 AND language IS NULL)");
+
+                            t.HasCheckConstraint("ck_library_document_source", "(preview_kind IN (1, 2) AND source_text IS NOT NULL AND octet_length(source_text) <= 256000 AND encoding IS NOT NULL AND encoding = 'utf-8')\nOR (preview_kind IN (0, 3) AND source_text IS NULL AND encoding IS NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("Wukna.Features.Library.LibraryFolder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("integer")
+                        .HasColumnName("category");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<int>("Depth")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("integer")
+                        .HasColumnName("depth");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("normalized_name")
+                        .HasComputedColumnSql("upper(btrim(name))", true);
+
+                    b.Property<Guid?>("ParentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("parent_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_library_folders");
+
+                    b.HasAlternateKey("Id", "UserId", "Category")
+                        .HasName("ak_library_folders_id_user_id_category");
+
+                    b.HasIndex("ParentId", "UserId", "Category")
+                        .HasDatabaseName("ix_library_folders_parent_id_user_id_category");
+
+                    b.HasIndex("UserId", "Name", "Id")
+                        .HasDatabaseName("ix_library_folders_user_id_name_id");
+
+                    b.HasIndex("UserId", "Category", "ParentId", "NormalizedName")
+                        .IsUnique()
+                        .HasDatabaseName("ix_library_folders_sibling_name");
+
+                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("UserId", "Category", "ParentId", "NormalizedName"), false);
+
+                    b.ToTable("library_folders", null, t =>
+                        {
+                            t.HasTrigger("library_folders_hierarchy");
+
+                            t.HasCheckConstraint("ck_library_folder_category", "category IN (0, 1, 2)");
+
+                            t.HasCheckConstraint("ck_library_folder_dates", "updated_at >= created_at");
+
+                            t.HasCheckConstraint("ck_library_folder_depth", "depth BETWEEN 0 AND 32");
+
+                            t.HasCheckConstraint("ck_library_folder_name", "char_length(btrim(name)) > 0 AND name !~ '[[:cntrl:]]'");
+
+                            t.HasCheckConstraint("ck_library_folder_parent", "parent_id IS NULL OR parent_id <> id");
+                        });
+                });
+
+            modelBuilder.Entity("Wukna.Features.Library.LibraryItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("integer")
+                        .HasColumnName("category");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("Favorite")
+                        .HasColumnType("boolean")
+                        .HasColumnName("favorite");
+
+                    b.Property<Guid?>("FolderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("folder_id");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("notes");
+
+                    b.PrimitiveCollection<string[]>("Tags")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("tags");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_library_items");
+
+                    b.HasAlternateKey("Id", "UserId")
+                        .HasName("ak_library_items_id_user_id");
+
+                    b.HasAlternateKey("Id", "UserId", "Category")
+                        .HasName("ak_library_items_id_user_id_category");
+
+                    b.HasIndex("FolderId", "UserId", "Category")
+                        .HasDatabaseName("ix_library_items_folder_id_user_id_category");
+
+                    b.HasIndex("UserId", "CreatedAt", "Id")
+                        .HasDatabaseName("ix_library_items_user_id_created_at_id")
+                        .HasFilter("deleted_at IS NULL");
+
+                    b.HasIndex("UserId", "DeletedAt", "Id")
+                        .HasDatabaseName("ix_library_items_user_id_deleted_at_id")
+                        .HasFilter("deleted_at IS NOT NULL");
+
+                    b.HasIndex("UserId", "Name", "Id")
+                        .HasDatabaseName("ix_library_items_user_id_name_id")
+                        .HasFilter("deleted_at IS NULL");
+
+                    b.HasIndex("UserId", "UpdatedAt", "Id")
+                        .HasDatabaseName("ix_library_items_user_id_updated_at_id")
+                        .HasFilter("deleted_at IS NULL");
+
+                    b.HasIndex("UserId", "Category", "CreatedAt", "Id")
+                        .HasDatabaseName("ix_library_items_user_id_category_created_at_id")
+                        .HasFilter("deleted_at IS NULL");
+
+                    b.HasIndex(new[] { "UserId", "CreatedAt", "Id" }, "ix_library_items_favorites")
+                        .HasDatabaseName("ix_library_items_user_id_created_at_id1")
+                        .HasFilter("deleted_at IS NULL AND favorite");
+
+                    b.ToTable("library_items", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_library_item_category", "category IN (0, 1, 2)");
+
+                            t.HasCheckConstraint("ck_library_item_dates", "updated_at >= created_at AND (deleted_at IS NULL OR deleted_at >= created_at)");
+
+                            t.HasCheckConstraint("ck_library_item_name", "char_length(btrim(name)) > 0 AND name !~ '[[:cntrl:]]'");
+
+                            t.HasCheckConstraint("ck_library_item_tags", "cardinality(tags) <= 12 AND array_position(tags, NULL) IS NULL\nAND (cardinality(tags) = 0 OR (array_ndims(tags) = 1\n    AND array_to_string(tags, '') !~ '[[:cntrl:]]'\n    AND array_to_string(tags, chr(31)) ~ ('^[^' || chr(31) || ']{1,40}(' || chr(31) || '[^' || chr(31) || ']{1,40})*$')))");
+                        });
+                });
+
+            modelBuilder.Entity("Wukna.Features.Library.LibraryVideo", b =>
+                {
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("item_id");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("integer")
+                        .HasColumnName("category");
+
+                    b.Property<string>("Creator")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("creator");
+
+                    b.Property<string>("MetadataErrorCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("metadata_error_code");
+
+                    b.Property<DateTimeOffset?>("MetadataFetchedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("metadata_fetched_at");
+
+                    b.Property<int>("Provider")
+                        .HasColumnType("integer")
+                        .HasColumnName("provider");
+
+                    b.Property<string>("ProviderTitle")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("provider_title");
+
+                    b.Property<string>("ThumbnailUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("thumbnail_url");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("url");
+
+                    b.Property<string>("UrlLookupHash")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("url_lookup_hash")
+                        .HasComputedColumnSql("md5(url)", true);
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<string>("VideoId")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("video_id");
+
+                    b.HasKey("ItemId")
+                        .HasName("pk_library_videos");
+
+                    b.HasIndex("UserId", "UrlLookupHash")
+                        .HasDatabaseName("ix_library_videos_user_id_url_lookup_hash");
+
+                    b.HasIndex("ItemId", "UserId", "Category")
+                        .IsUnique()
+                        .HasDatabaseName("ix_library_videos_item_id_user_id_category");
+
+                    b.ToTable("library_videos", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_library_video_category", "category = 2");
+
+                            t.HasCheckConstraint("ck_library_video_reference", "(provider = 0 AND video_id IS NOT NULL AND video_id ~ '^[A-Za-z0-9_-]{11}$' AND url = 'https://www.youtube.com/watch?v=' || video_id)\nOR (provider = 1 AND video_id IS NOT NULL AND video_id ~ '^[0-9]{1,20}$' AND url = 'https://vimeo.com/' || video_id)\nOR (provider = 2 AND video_id IS NULL AND url ~ '^https://[^/@[:space:]]+(/|$)' AND url !~ '[[:cntrl:]]')");
+
+                            t.HasCheckConstraint("ck_library_video_thumbnail", "thumbnail_url IS NULL OR (provider = 0 AND thumbnail_url ~ '^https://i[.]ytimg[.]com/vi/') OR (provider = 1 AND thumbnail_url ~ '^https://i[.]vimeocdn[.]com/video/')");
+                        });
+                });
+
+            modelBuilder.Entity("Wukna.Features.Library.StorageEntitlement", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<long>("QuotaBytes")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(1000000000L)
+                        .HasColumnName("quota_bytes");
+
+                    b.Property<int>("Source")
+                        .HasColumnType("integer")
+                        .HasColumnName("source");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.HasKey("UserId")
+                        .HasName("pk_storage_entitlements");
+
+                    b.ToTable("storage_entitlements", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_storage_entitlement_dates", "updated_at >= created_at");
+
+                            t.HasCheckConstraint("ck_storage_entitlement_quota", "quota_bytes > 0");
+
+                            t.HasCheckConstraint("ck_storage_entitlement_source", "source IN (0, 1, 2)");
+                        });
+                });
+
+            modelBuilder.Entity("Wukna.Features.Library.StorageReservation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("AttemptId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("attempt_id");
+
+                    b.Property<DateTimeOffset?>("CancellationRequestedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cancellation_requested_at");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("integer")
+                        .HasColumnName("category");
+
+                    b.Property<Guid>("ClientUploadId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("client_upload_id");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("DeclaredChecksum")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("declared_checksum");
+
+                    b.Property<string>("DeclaredContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("declared_content_type");
+
+                    b.Property<long>("DeclaredSizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("declared_size_bytes");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("file_name");
+
+                    b.Property<Guid?>("FolderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("folder_id");
+
+                    b.Property<string>("LastErrorCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("last_error_code");
+
+                    b.Property<DateTimeOffset?>("LeaseExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("lease_expires_at");
+
+                    b.Property<Guid?>("LeaseToken")
+                        .HasColumnType("uuid")
+                        .HasColumnName("lease_token");
+
+                    b.Property<string>("RequestFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("request_fingerprint");
+
+                    b.Property<long>("ReservedBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("reserved_bytes");
+
+                    b.Property<Guid?>("ResultItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("result_item_id");
+
+                    b.Property<DateTimeOffset?>("ResultPurgedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("result_purged_at");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer")
+                        .HasColumnName("state");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_storage_reservations");
+
+                    b.HasIndex("ExpiresAt", "Id")
+                        .HasDatabaseName("ix_storage_reservations_expires_at_id")
+                        .HasFilter("state IN (0, 1, 2)");
+
+                    b.HasIndex("UserId", "ClientUploadId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_storage_reservations_user_id_client_upload_id");
+
+                    b.HasIndex("FolderId", "UserId", "Category")
+                        .HasDatabaseName("ix_storage_reservations_folder_id_user_id_category");
+
+                    b.HasIndex("ResultItemId", "UserId", "Category")
+                        .HasDatabaseName("ix_storage_reservations_result_item_id_user_id_category");
+
+                    b.ToTable("storage_reservations", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_library_upload_category", "category IN (0, 1)");
+
+                            t.HasCheckConstraint("ck_library_upload_dates", "updated_at >= created_at AND expires_at > created_at AND (completed_at IS NULL OR completed_at >= created_at)");
+
+                            t.HasCheckConstraint("ck_library_upload_filename", "char_length(btrim(file_name)) > 0 AND file_name !~ '[[:cntrl:]/\\\\]' AND char_length(btrim(declared_content_type)) > 0");
+
+                            t.HasCheckConstraint("ck_library_upload_identity", "client_upload_id <> '00000000-0000-0000-0000-000000000000' AND request_fingerprint ~ '^[0-9a-f]{64}$' AND declared_checksum ~ '^[0-9a-f]{64}$'");
+
+                            t.HasCheckConstraint("ck_library_upload_lease", "((lease_token IS NULL AND lease_expires_at IS NULL) OR\n    (lease_token IS NOT NULL AND lease_expires_at IS NOT NULL AND attempt_id IS NOT NULL\n        AND lease_expires_at > created_at))\nAND (state <> 1 OR lease_token IS NOT NULL)\nAND (state IN (0, 1, 2) OR lease_token IS NULL)\nAND (lease_token IS NULL OR lease_token <> '00000000-0000-0000-0000-000000000000')\nAND (attempt_id IS NULL OR attempt_id <> '00000000-0000-0000-0000-000000000000')");
+
+                            t.HasCheckConstraint("ck_library_upload_result", "(state = 3 AND reserved_bytes = 0 AND completed_at IS NOT NULL AND\n    ((result_item_id IS NOT NULL AND result_purged_at IS NULL) OR\n     (result_item_id IS NULL AND result_purged_at IS NOT NULL AND result_purged_at >= completed_at)))\nOR (state = 2 AND completed_at IS NULL AND result_item_id IS NOT NULL AND result_purged_at IS NULL)\nOR (state NOT IN (2, 3) AND completed_at IS NULL AND result_item_id IS NULL AND result_purged_at IS NULL)");
+
+                            t.HasCheckConstraint("ck_library_upload_sizes", "declared_size_bytes > 0 AND reserved_bytes >= 0 AND (state NOT IN (0, 1) OR reserved_bytes >= declared_size_bytes)");
+
+                            t.HasCheckConstraint("ck_library_upload_state", "state IN (0, 1, 2, 3, 4, 5, 6)");
+
+                            t.HasCheckConstraint("ck_library_upload_terminal_folder", "state IN (0, 1, 2) OR folder_id IS NULL");
                         });
                 });
 
@@ -2128,6 +2969,179 @@ namespace Wukna.Migrations
                     b.Navigation("Message");
                 });
 
+            modelBuilder.Entity("Wukna.Features.Library.LibraryAsset", b =>
+                {
+                    b.HasOne("Wukna.Features.Library.LibraryItem", "Item")
+                        .WithOne("Asset")
+                        .HasForeignKey("Wukna.Features.Library.LibraryAsset", "ItemId", "UserId", "Category")
+                        .HasPrincipalKey("Wukna.Features.Library.LibraryItem", "Id", "UserId", "Category")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_library_assets_library_items_item_id_user_id_category");
+
+                    b.Navigation("Item");
+                });
+
+            modelBuilder.Entity("Wukna.Features.Library.LibraryCollection", b =>
+                {
+                    b.HasOne("Wukna.Features.Users.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_library_collections_users_user_id");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Wukna.Features.Library.LibraryCollectionItem", b =>
+                {
+                    b.HasOne("Wukna.Features.Library.LibraryCollection", "Collection")
+                        .WithMany()
+                        .HasForeignKey("CollectionId", "UserId")
+                        .HasPrincipalKey("Id", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_library_collection_items_library_collections_collection_id_");
+
+                    b.HasOne("Wukna.Features.Library.LibraryItem", "Item")
+                        .WithMany()
+                        .HasForeignKey("ItemId", "UserId")
+                        .HasPrincipalKey("Id", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_library_collection_items_library_items_item_id_user_id");
+
+                    b.Navigation("Collection");
+
+                    b.Navigation("Item");
+                });
+
+            modelBuilder.Entity("Wukna.Features.Library.LibraryDocument", b =>
+                {
+                    b.HasOne("Wukna.Features.Library.LibraryItem", "Item")
+                        .WithOne("Document")
+                        .HasForeignKey("Wukna.Features.Library.LibraryDocument", "ItemId", "UserId", "Category")
+                        .HasPrincipalKey("Wukna.Features.Library.LibraryItem", "Id", "UserId", "Category")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_library_documents_library_items_item_id_user_id_category");
+
+                    b.HasOne("Wukna.Features.Library.LibraryAsset", null)
+                        .WithMany()
+                        .HasForeignKey("ItemId", "UserId", "Category")
+                        .HasPrincipalKey("ItemId", "UserId", "Category")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_library_documents_library_assets_item_id_user_id_category");
+
+                    b.Navigation("Item");
+                });
+
+            modelBuilder.Entity("Wukna.Features.Library.LibraryFolder", b =>
+                {
+                    b.HasOne("Wukna.Features.Users.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_library_folders_users_user_id");
+
+                    b.HasOne("Wukna.Features.Library.LibraryFolder", "Parent")
+                        .WithMany()
+                        .HasForeignKey("ParentId", "UserId", "Category")
+                        .HasPrincipalKey("Id", "UserId", "Category")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_library_folders_library_folders_parent_id_user_id_category");
+
+                    b.Navigation("Parent");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Wukna.Features.Library.LibraryItem", b =>
+                {
+                    b.HasOne("Wukna.Features.Users.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_library_items_users_user_id");
+
+                    b.HasOne("Wukna.Features.Library.LibraryFolder", "Folder")
+                        .WithMany()
+                        .HasForeignKey("FolderId", "UserId", "Category")
+                        .HasPrincipalKey("Id", "UserId", "Category")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_library_items_library_folders_folder_id_user_id_category");
+
+                    b.Navigation("Folder");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Wukna.Features.Library.LibraryVideo", b =>
+                {
+                    b.HasOne("Wukna.Features.Library.LibraryItem", "Item")
+                        .WithOne("Video")
+                        .HasForeignKey("Wukna.Features.Library.LibraryVideo", "ItemId", "UserId", "Category")
+                        .HasPrincipalKey("Wukna.Features.Library.LibraryItem", "Id", "UserId", "Category")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_library_videos_library_items_item_id_user_id_category");
+
+                    b.Navigation("Item");
+                });
+
+            modelBuilder.Entity("Wukna.Features.Library.StorageEntitlement", b =>
+                {
+                    b.HasOne("Wukna.Features.Users.User", "User")
+                        .WithOne()
+                        .HasForeignKey("Wukna.Features.Library.StorageEntitlement", "UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_storage_entitlements_asp_net_users_user_id");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Wukna.Features.Library.StorageReservation", b =>
+                {
+                    b.HasOne("Wukna.Features.Library.StorageEntitlement", "Entitlement")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_storage_reservations_storage_entitlements_user_id");
+
+                    b.HasOne("Wukna.Features.Library.LibraryFolder", "Folder")
+                        .WithMany()
+                        .HasForeignKey("FolderId", "UserId", "Category")
+                        .HasPrincipalKey("Id", "UserId", "Category")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_storage_reservations_library_folders_folder_id_user_id_cate");
+
+                    b.HasOne("Wukna.Features.Library.LibraryItem", "ResultItem")
+                        .WithMany()
+                        .HasForeignKey("ResultItemId", "UserId", "Category")
+                        .HasPrincipalKey("Id", "UserId", "Category")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_storage_reservations_library_items_result_item_id_user_id_c");
+
+                    b.HasOne("Wukna.Features.Library.LibraryAsset", null)
+                        .WithMany()
+                        .HasForeignKey("ResultItemId", "UserId", "Category")
+                        .HasPrincipalKey("ItemId", "UserId", "Category")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_storage_reservations_library_assets_result_item_id_user_id_");
+
+                    b.Navigation("Entitlement");
+
+                    b.Navigation("Folder");
+
+                    b.Navigation("ResultItem");
+                });
+
             modelBuilder.Entity("Wukna.Features.NoteConnection.NoteConnection", b =>
                 {
                     b.HasOne("Wukna.Features.Notes.Note", "SourceNote")
@@ -2314,6 +3328,15 @@ namespace Wukna.Migrations
                     b.Navigation("Attachment");
 
                     b.Navigation("ScheduledTask");
+                });
+
+            modelBuilder.Entity("Wukna.Features.Library.LibraryItem", b =>
+                {
+                    b.Navigation("Asset");
+
+                    b.Navigation("Document");
+
+                    b.Navigation("Video");
                 });
 
             modelBuilder.Entity("Wukna.Features.Notes.Note", b =>

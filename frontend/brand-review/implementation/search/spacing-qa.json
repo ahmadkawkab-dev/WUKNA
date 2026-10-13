@@ -1,0 +1,18 @@
+{
+  "sidebarGap": 12,
+  "desktopAlignment": {
+    "input": {
+      "top": 222.921875,
+      "bottom": 266.921875,
+      "height": 44
+    },
+    "button": {
+      "top": 222.921875,
+      "bottom": 266.921875,
+      "height": 44
+    }
+  },
+  "clear": "draft and submitted search cleared; input focused; keyboard Enter works",
+  "mobile": "no overflow; clear inside field; click clears",
+  "browserErrors": []
+}

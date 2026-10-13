@@ -16,6 +16,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      secrets:
+        - sixlabors_license
     env_file:
       - .env.api
     environment:
@@ -53,3 +55,7 @@ volumes:
   postgres_data:
   profile_images:
   data_protection_keys:
+
+secrets:
+  sixlabors_license:
+    file: ${SIXLABORS_LICENSE_FILE:-./sixlabors.lic}

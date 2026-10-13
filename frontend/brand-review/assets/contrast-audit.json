@@ -1,0 +1,590 @@
+[
+  {
+    "palette": "original",
+    "mode": "light",
+    "foreground": "primary",
+    "background": "background",
+    "ratio": 5.876
+  },
+  {
+    "palette": "original",
+    "mode": "light",
+    "foreground": "foreground",
+    "background": "background",
+    "ratio": 16.466
+  },
+  {
+    "palette": "original",
+    "mode": "light",
+    "foreground": "muted-foreground",
+    "background": "background",
+    "ratio": 5.393
+  },
+  {
+    "palette": "original",
+    "mode": "light",
+    "foreground": "primary",
+    "background": "surface",
+    "ratio": 6.362
+  },
+  {
+    "palette": "original",
+    "mode": "light",
+    "foreground": "foreground",
+    "background": "surface",
+    "ratio": 17.828
+  },
+  {
+    "palette": "original",
+    "mode": "light",
+    "foreground": "muted-foreground",
+    "background": "surface",
+    "ratio": 5.839
+  },
+  {
+    "palette": "warm-minimal",
+    "mode": "light",
+    "foreground": "primary",
+    "background": "background",
+    "ratio": 6.154
+  },
+  {
+    "palette": "warm-minimal",
+    "mode": "light",
+    "foreground": "foreground",
+    "background": "background",
+    "ratio": 13.062
+  },
+  {
+    "palette": "warm-minimal",
+    "mode": "light",
+    "foreground": "muted-foreground",
+    "background": "background",
+    "ratio": 6.759
+  },
+  {
+    "palette": "warm-minimal",
+    "mode": "light",
+    "foreground": "primary",
+    "background": "surface",
+    "ratio": 6.433
+  },
+  {
+    "palette": "warm-minimal",
+    "mode": "light",
+    "foreground": "foreground",
+    "background": "surface",
+    "ratio": 13.655
+  },
+  {
+    "palette": "warm-minimal",
+    "mode": "light",
+    "foreground": "muted-foreground",
+    "background": "surface",
+    "ratio": 7.065
+  },
+  {
+    "palette": "calm-sage",
+    "mode": "light",
+    "foreground": "primary",
+    "background": "background",
+    "ratio": 6.224
+  },
+  {
+    "palette": "calm-sage",
+    "mode": "light",
+    "foreground": "foreground",
+    "background": "background",
+    "ratio": 13.071
+  },
+  {
+    "palette": "calm-sage",
+    "mode": "light",
+    "foreground": "muted-foreground",
+    "background": "background",
+    "ratio": 6.764
+  },
+  {
+    "palette": "calm-sage",
+    "mode": "light",
+    "foreground": "primary",
+    "background": "surface",
+    "ratio": 6.522
+  },
+  {
+    "palette": "calm-sage",
+    "mode": "light",
+    "foreground": "foreground",
+    "background": "surface",
+    "ratio": 13.697
+  },
+  {
+    "palette": "calm-sage",
+    "mode": "light",
+    "foreground": "muted-foreground",
+    "background": "surface",
+    "ratio": 7.088
+  },
+  {
+    "palette": "soft-lavender",
+    "mode": "light",
+    "foreground": "primary",
+    "background": "background",
+    "ratio": 5.946
+  },
+  {
+    "palette": "soft-lavender",
+    "mode": "light",
+    "foreground": "foreground",
+    "background": "background",
+    "ratio": 13.103
+  },
+  {
+    "palette": "soft-lavender",
+    "mode": "light",
+    "foreground": "muted-foreground",
+    "background": "background",
+    "ratio": 6.78
+  },
+  {
+    "palette": "soft-lavender",
+    "mode": "light",
+    "foreground": "primary",
+    "background": "surface",
+    "ratio": 6.208
+  },
+  {
+    "palette": "soft-lavender",
+    "mode": "light",
+    "foreground": "foreground",
+    "background": "surface",
+    "ratio": 13.681
+  },
+  {
+    "palette": "soft-lavender",
+    "mode": "light",
+    "foreground": "muted-foreground",
+    "background": "surface",
+    "ratio": 7.079
+  },
+  {
+    "palette": "ocean-slate",
+    "mode": "light",
+    "foreground": "primary",
+    "background": "background",
+    "ratio": 5.75
+  },
+  {
+    "palette": "ocean-slate",
+    "mode": "light",
+    "foreground": "foreground",
+    "background": "background",
+    "ratio": 13.163
+  },
+  {
+    "palette": "ocean-slate",
+    "mode": "light",
+    "foreground": "muted-foreground",
+    "background": "background",
+    "ratio": 6.811
+  },
+  {
+    "palette": "ocean-slate",
+    "mode": "light",
+    "foreground": "primary",
+    "background": "surface",
+    "ratio": 6.014
+  },
+  {
+    "palette": "ocean-slate",
+    "mode": "light",
+    "foreground": "foreground",
+    "background": "surface",
+    "ratio": 13.766
+  },
+  {
+    "palette": "ocean-slate",
+    "mode": "light",
+    "foreground": "muted-foreground",
+    "background": "surface",
+    "ratio": 7.123
+  },
+  {
+    "palette": "earthy-terracotta",
+    "mode": "light",
+    "foreground": "primary",
+    "background": "background",
+    "ratio": 5.412
+  },
+  {
+    "palette": "earthy-terracotta",
+    "mode": "light",
+    "foreground": "foreground",
+    "background": "background",
+    "ratio": 12.762
+  },
+  {
+    "palette": "earthy-terracotta",
+    "mode": "light",
+    "foreground": "muted-foreground",
+    "background": "background",
+    "ratio": 6.604
+  },
+  {
+    "palette": "earthy-terracotta",
+    "mode": "light",
+    "foreground": "primary",
+    "background": "surface",
+    "ratio": 5.741
+  },
+  {
+    "palette": "earthy-terracotta",
+    "mode": "light",
+    "foreground": "foreground",
+    "background": "surface",
+    "ratio": 13.537
+  },
+  {
+    "palette": "earthy-terracotta",
+    "mode": "light",
+    "foreground": "muted-foreground",
+    "background": "surface",
+    "ratio": 7.005
+  },
+  {
+    "palette": "modern-neutral",
+    "mode": "light",
+    "foreground": "primary",
+    "background": "background",
+    "ratio": 6.06
+  },
+  {
+    "palette": "modern-neutral",
+    "mode": "light",
+    "foreground": "foreground",
+    "background": "background",
+    "ratio": 12.988
+  },
+  {
+    "palette": "modern-neutral",
+    "mode": "light",
+    "foreground": "muted-foreground",
+    "background": "background",
+    "ratio": 6.72
+  },
+  {
+    "palette": "modern-neutral",
+    "mode": "light",
+    "foreground": "primary",
+    "background": "surface",
+    "ratio": 6.339
+  },
+  {
+    "palette": "modern-neutral",
+    "mode": "light",
+    "foreground": "foreground",
+    "background": "surface",
+    "ratio": 13.587
+  },
+  {
+    "palette": "modern-neutral",
+    "mode": "light",
+    "foreground": "muted-foreground",
+    "background": "surface",
+    "ratio": 7.03
+  },
+  {
+    "palette": "original",
+    "mode": "dark",
+    "foreground": "primary",
+    "background": "background",
+    "ratio": 8.886
+  },
+  {
+    "palette": "original",
+    "mode": "dark",
+    "foreground": "foreground",
+    "background": "background",
+    "ratio": 16.037
+  },
+  {
+    "palette": "original",
+    "mode": "dark",
+    "foreground": "muted-foreground",
+    "background": "background",
+    "ratio": 8.816
+  },
+  {
+    "palette": "original",
+    "mode": "dark",
+    "foreground": "primary",
+    "background": "surface",
+    "ratio": 7.885
+  },
+  {
+    "palette": "original",
+    "mode": "dark",
+    "foreground": "foreground",
+    "background": "surface",
+    "ratio": 14.231
+  },
+  {
+    "palette": "original",
+    "mode": "dark",
+    "foreground": "muted-foreground",
+    "background": "surface",
+    "ratio": 7.823
+  },
+  {
+    "palette": "warm-minimal",
+    "mode": "dark",
+    "foreground": "primary",
+    "background": "background",
+    "ratio": 8.686
+  },
+  {
+    "palette": "warm-minimal",
+    "mode": "dark",
+    "foreground": "foreground",
+    "background": "background",
+    "ratio": 14.724
+  },
+  {
+    "palette": "warm-minimal",
+    "mode": "dark",
+    "foreground": "muted-foreground",
+    "background": "background",
+    "ratio": 9.816
+  },
+  {
+    "palette": "warm-minimal",
+    "mode": "dark",
+    "foreground": "primary",
+    "background": "surface",
+    "ratio": 8.077
+  },
+  {
+    "palette": "warm-minimal",
+    "mode": "dark",
+    "foreground": "foreground",
+    "background": "surface",
+    "ratio": 13.69
+  },
+  {
+    "palette": "warm-minimal",
+    "mode": "dark",
+    "foreground": "muted-foreground",
+    "background": "surface",
+    "ratio": 9.127
+  },
+  {
+    "palette": "calm-sage",
+    "mode": "dark",
+    "foreground": "primary",
+    "background": "background",
+    "ratio": 9.569
+  },
+  {
+    "palette": "calm-sage",
+    "mode": "dark",
+    "foreground": "foreground",
+    "background": "background",
+    "ratio": 14.41
+  },
+  {
+    "palette": "calm-sage",
+    "mode": "dark",
+    "foreground": "muted-foreground",
+    "background": "background",
+    "ratio": 9.607
+  },
+  {
+    "palette": "calm-sage",
+    "mode": "dark",
+    "foreground": "primary",
+    "background": "surface",
+    "ratio": 8.879
+  },
+  {
+    "palette": "calm-sage",
+    "mode": "dark",
+    "foreground": "foreground",
+    "background": "surface",
+    "ratio": 13.37
+  },
+  {
+    "palette": "calm-sage",
+    "mode": "dark",
+    "foreground": "muted-foreground",
+    "background": "surface",
+    "ratio": 8.913
+  },
+  {
+    "palette": "soft-lavender",
+    "mode": "dark",
+    "foreground": "primary",
+    "background": "background",
+    "ratio": 9.475
+  },
+  {
+    "palette": "soft-lavender",
+    "mode": "dark",
+    "foreground": "foreground",
+    "background": "background",
+    "ratio": 14.702
+  },
+  {
+    "palette": "soft-lavender",
+    "mode": "dark",
+    "foreground": "muted-foreground",
+    "background": "background",
+    "ratio": 9.801
+  },
+  {
+    "palette": "soft-lavender",
+    "mode": "dark",
+    "foreground": "primary",
+    "background": "surface",
+    "ratio": 8.819
+  },
+  {
+    "palette": "soft-lavender",
+    "mode": "dark",
+    "foreground": "foreground",
+    "background": "surface",
+    "ratio": 13.684
+  },
+  {
+    "palette": "soft-lavender",
+    "mode": "dark",
+    "foreground": "muted-foreground",
+    "background": "surface",
+    "ratio": 9.123
+  },
+  {
+    "palette": "ocean-slate",
+    "mode": "dark",
+    "foreground": "primary",
+    "background": "background",
+    "ratio": 8.659
+  },
+  {
+    "palette": "ocean-slate",
+    "mode": "dark",
+    "foreground": "foreground",
+    "background": "background",
+    "ratio": 14.264
+  },
+  {
+    "palette": "ocean-slate",
+    "mode": "dark",
+    "foreground": "muted-foreground",
+    "background": "background",
+    "ratio": 9.509
+  },
+  {
+    "palette": "ocean-slate",
+    "mode": "dark",
+    "foreground": "primary",
+    "background": "surface",
+    "ratio": 8.036
+  },
+  {
+    "palette": "ocean-slate",
+    "mode": "dark",
+    "foreground": "foreground",
+    "background": "surface",
+    "ratio": 13.238
+  },
+  {
+    "palette": "ocean-slate",
+    "mode": "dark",
+    "foreground": "muted-foreground",
+    "background": "surface",
+    "ratio": 8.825
+  },
+  {
+    "palette": "earthy-terracotta",
+    "mode": "dark",
+    "foreground": "primary",
+    "background": "background",
+    "ratio": 8.601
+  },
+  {
+    "palette": "earthy-terracotta",
+    "mode": "dark",
+    "foreground": "foreground",
+    "background": "background",
+    "ratio": 14.433
+  },
+  {
+    "palette": "earthy-terracotta",
+    "mode": "dark",
+    "foreground": "muted-foreground",
+    "background": "background",
+    "ratio": 9.622
+  },
+  {
+    "palette": "earthy-terracotta",
+    "mode": "dark",
+    "foreground": "primary",
+    "background": "surface",
+    "ratio": 8.007
+  },
+  {
+    "palette": "earthy-terracotta",
+    "mode": "dark",
+    "foreground": "foreground",
+    "background": "surface",
+    "ratio": 13.437
+  },
+  {
+    "palette": "earthy-terracotta",
+    "mode": "dark",
+    "foreground": "muted-foreground",
+    "background": "surface",
+    "ratio": 8.958
+  },
+  {
+    "palette": "modern-neutral",
+    "mode": "dark",
+    "foreground": "primary",
+    "background": "background",
+    "ratio": 8.267
+  },
+  {
+    "palette": "modern-neutral",
+    "mode": "dark",
+    "foreground": "foreground",
+    "background": "background",
+    "ratio": 14.186
+  },
+  {
+    "palette": "modern-neutral",
+    "mode": "dark",
+    "foreground": "muted-foreground",
+    "background": "background",
+    "ratio": 9.457
+  },
+  {
+    "palette": "modern-neutral",
+    "mode": "dark",
+    "foreground": "primary",
+    "background": "surface",
+    "ratio": 7.659
+  },
+  {
+    "palette": "modern-neutral",
+    "mode": "dark",
+    "foreground": "foreground",
+    "background": "surface",
+    "ratio": 13.141
+  },
+  {
+    "palette": "modern-neutral",
+    "mode": "dark",
+    "foreground": "muted-foreground",
+    "background": "surface",
+    "ratio": 8.761
+  }
+]

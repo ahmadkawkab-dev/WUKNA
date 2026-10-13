@@ -1,0 +1,25 @@
+# Storage for a host-run Development API (dotnet watch).
+# docker compose --project-name wukna-library-local --env-file /private/library/storage.env -f compose.library.host.yaml up -d
+services:
+  seaweedfs:
+    extends: {file: compose.library.services.yaml, service: seaweedfs}
+    ports: ["127.0.0.1:18333:8333"]
+    # Docker cannot publish host ports from an internal-only network.
+    networks: [library_private, library_host]
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          wget -q -O - http://127.0.0.1:9333/cluster/status | grep -q '"IsLeader":true'
+          && wget -q -O /dev/null http://127.0.0.1:8888/
+          && wget -q -O - http://127.0.0.1:9333/dir/status | grep -q '"Url":"seaweedfs:8080"'
+  clamd:
+    extends: {file: compose.library.services.yaml, service: clamd}
+    ports: ["127.0.0.1:13311:3310"]
+networks:
+  library_private: {internal: true}
+  library_host: {}
+  library_scanner_egress: {}
+volumes:
+  library_objects: {}
+  library_clam_signatures: {}

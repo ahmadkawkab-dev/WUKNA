@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Save to Wukna",
+  "version": "1.0.0",
+  "description": "Save a YouTube video link to your private Wukna Library.",
+  "permissions": ["storage", "scripting", "activeTab"],
+  "optional_host_permissions": ["https://*/*", "http://localhost/*", "http://127.0.0.1/*"],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "action": { "default_title": "Save YouTube video to Wukna", "default_popup": "popup.html", "default_icon": "icon.png" },
+  "icons": { "192": "icon.png" },
+  "options_page": "options.html",
+  "content_scripts": [{ "matches": ["https://www.youtube.com/*", "https://youtube.com/*", "https://m.youtube.com/*"], "js": ["youtube.js"], "css": ["youtube.css"] }],
+  "web_accessible_resources": [{ "resources": ["wukna.svg"], "matches": ["https://www.youtube.com/*", "https://youtube.com/*", "https://m.youtube.com/*"] }]
+}

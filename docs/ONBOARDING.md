@@ -57,13 +57,13 @@ Local `wukna:tour-event` CustomEvents emit `tour_started`, `tour_step_viewed`,
 tour version and step. No analytics platform, personal data collection or network delivery
 is introduced.
 
-## Asset credit and verification
+## Tour icon and verification
 
-The locally bundled Help icon is [Question mark circle by QudaDesign on Flaticon](https://www.flaticon.com/free-icon/question-mark-circle_10380844).
-The original PNG is unchanged and used as a CSS mask so its color follows the theme.
-Visible attribution is in the account footer; the source and license links accompany the
-asset in `public/icons/flaticon-help.LICENSE.txt`. No Flaticon icon library or external
-runtime request is needed.
+The user-supplied guided-tour SVG is bundled at `public/icons/guided-tour.svg`.
+It replaces the question mark in desktop/mobile replay buttons and the tour card.
+The SVG is used as a CSS mask so its color follows the theme, with the original
+geometry preserved. The previous icon asset and its account-footer attribution
+have been removed. No external icon request is needed.
 
 Focused frontend tests cover state/versions, outcomes/retry/replay, API payload and
 cancellation, the five outer steps, desktop/mobile navigation and missing targets,

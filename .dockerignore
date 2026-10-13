@@ -10,6 +10,7 @@
 **/dist
 **/TestResults
 **/coverage
+artifacts
 .env*
 secrets.json
 appsettings.Local.json
@@ -23,5 +24,8 @@ appsettings.*.local.json
 postgres-data
 App_Data/profile-images
 App_Data/data-protection-keys
+App_Data/library-quarantine
+library-s3.json
+storage.env
 *.log
 logs

@@ -8,6 +8,16 @@ permissions:
   contents: read
 
 jobs:
+  operations:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Check deployment helper syntax
+        run: bash -n ops/production-deploy
+      - name: Test isolated deployment helper
+        run: python3 ops/tests/test_production_deploy.py
+
   backend:
     runs-on: ubuntu-latest
     steps:
@@ -23,6 +33,8 @@ jobs:
         run: dotnet restore tests/Wukna.IntegrationTests/Wukna.IntegrationTests.csproj
 
       - name: Build
+        env:
+          SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
         run: dotnet build tests/Wukna.IntegrationTests/Wukna.IntegrationTests.csproj --configuration Release --no-restore
 
       - name: Test
@@ -53,7 +65,7 @@ jobs:
         
   publish-images:
     name: Build and publish images
-    needs: [backend, frontend]
+    needs: [backend, frontend, operations]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04-arm
     permissions:
@@ -81,6 +93,8 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: ghcr.io/ahmadkawkab-dev/wukna-api:sha-${{ github.sha }}
+          secrets: |
+            "sixlabors_license=${{ secrets.SIXLABORS_LICENSE_KEY }}"
 
       - name: Build and push frontend
         uses: docker/build-push-action@v7

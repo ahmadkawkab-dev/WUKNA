@@ -22,10 +22,9 @@ import { AuthScreen } from "../features/auth/AuthScreen";
 import { PrivacyPolicyPage, PublicHome, TermsOfServicePage } from "../features/public/PublicPages";
 const AccountPanel = lazy(() => import("../features/account/AccountPanel").then((module) => ({ default: module.AccountPanel })));
 import { accountSectionForPath } from "../features/account/accountRoute";
-import { Wordmark } from "../components/brand/Wordmark";
-import { AppShell } from "../components/navigation/AppShell";
+import { BrandRecovery, BrandState } from '../components/brand/BrandState';
+import type { PrismPlaybackState } from '../components/brand/prismPlayback';
 import { OnboardingProvider } from "../features/onboarding/OnboardingProvider";
-import { Button } from "../components/ui/Button";
 import { LoadingSkeleton } from "../components/ui/LoadingSkeleton";
 import { Notice } from "../components/ui/Notice";
 import { BoardLanding } from "../features/boards/BoardLanding";
@@ -38,6 +37,11 @@ import { NotificationRuntime } from "../features/notifications/NotificationRunti
 import { clearBrowserNotificationSession } from "../features/notifications/browserPush";
 const NotificationsPage = lazy(() => import("../features/notifications/NotificationsPage").then((module) => ({ default: module.NotificationsPage })));
 import { SoonPage } from "../features/future/PreviewUI";
+import { isLibraryPath, safeLibraryReturnPath } from '../features/library/libraryRoutes';
+import { clearLibraryShare, pendingLibrarySharePath } from '../features/library/libraryShare';
+import { clearPictureThumbnailCache } from '../features/library/pictureThumbnailCache';
+const LibraryRoot = lazy(() => import('../features/library/LibraryRoot').then(module => ({ default: module.LibraryRoot })));
+const WorkspaceShell = lazy(() => import('../features/library/LibraryAppShell').then(module => ({ default: module.LibraryAppShell })));
 const Workspace = lazy(() => import("../features/boards/BoardWorkspace").then((module) => ({ default: module.Workspace })));
 import { realtimeConnection } from "../realtime/connection";
 import {
@@ -47,6 +51,7 @@ import {
   type BoardSummaryChangedEvent,
 } from "../realtime/events";
 import { mergeBoardSummary } from "../realtime/reconcile";
+import { syncBoardVariations } from '../theme/boardVariationState';
 
 const boardFromPath = (path: string) =>
   /^\/boards\/([0-9a-f-]{36})$/i.exec(path)?.[1] ?? null;
@@ -65,6 +70,12 @@ export default function App() {
     [boardsReady, setBoardsReady] = useState(false),
     [failure, setFailure] = useState("");
   const started = useRef(false);
+  const openingMotion = useRef<PrismPlaybackState>({ elapsed: 0 });
+  const paletteAccountId = session?.user.id ?? null;
+  useEffect(() => {
+    if (!paletteAccountId) syncBoardVariations(null, []);
+    else if (boardsReady) syncBoardVariations(paletteAccountId, boards);
+  }, [paletteAccountId, boards, boardsReady]);
   const returnPath = useRef<string | null>(null);
   const notify = useCallback((message: string) => setNotice({ message, tone: "default" }), []);
   const warn = useCallback((message: string) => setNotice({ message, tone: "warning" }), []);
@@ -73,6 +84,11 @@ export default function App() {
     setPath(new URL(next, window.location.origin).pathname);
     window.dispatchEvent(new Event("wukna:navigation"));
   }, []);
+  useEffect(() => {
+    const shared = () => { if (pendingLibrarySharePath()) navigate('/library/videos'); };
+    window.addEventListener('wukna:library-share', shared);
+    return () => window.removeEventListener('wukna:library-share', shared);
+  }, [navigate]);
   useEffect(() => {
     const pop = () => setPath(window.location.pathname);
     window.addEventListener("popstate", pop);
@@ -98,11 +114,12 @@ export default function App() {
         }
         if (code) {
           setSession(await exchangeGoogleCode(code));
-          navigate(takeNotificationReturnPath() ?? "/home");
+          navigate(pendingLibrarySharePath() ?? takeNotificationReturnPath() ?? "/home");
           return;
         }
       }
       const restored = await bootstrapSession();
+      if (!restored) void clearPictureThumbnailCache();
       setSession(restored);
       if (restored && window.location.pathname === "/home") { const target = takeNotificationReturnPath(); if (target) navigate(target); }
       if (restored && callbackError) notify(callbackError);
@@ -157,12 +174,13 @@ export default function App() {
   );
   useEffect(() => {
     setSessionExpiredHandler(() => {
+      void clearPictureThumbnailCache();
       setSession(null);
       setBoards([]);
       setBoardsReady(false);
       setStartupError("Your session expired. Please sign in again.");
       const target = window.location.pathname + window.location.search;
-      returnPath.current = rememberNotificationReturnPath(target);
+      returnPath.current = safeLibraryReturnPath(window.location.pathname) ?? rememberNotificationReturnPath(target);
       window.history.replaceState(null, "", "/login");
       setPath("/login");
     });
@@ -171,7 +189,7 @@ export default function App() {
   useEffect(() => {
     if (!starting && !startupBlocked && !session && !["/", "/login", "/register", "/privacy", "/terms"].includes(path)) {
       const target = window.location.pathname + window.location.search;
-      returnPath.current = rememberNotificationReturnPath(target);
+      returnPath.current = safeLibraryReturnPath(window.location.pathname) ?? rememberNotificationReturnPath(target);
       window.history.replaceState(null, "", "/login");
       setPath("/login");
     }
@@ -184,7 +202,9 @@ export default function App() {
       await clearBrowserNotificationSession(true, session?.user.id).catch(() => undefined);
       if (all) await logoutEverywhere();
       else await logout();
+      await clearPictureThumbnailCache();
       takeNotificationReturnPath(); returnPath.current = null;
+      clearLibraryShare();
       setSession(null);
       setBoards([]);
       setBoardsReady(false);
@@ -215,6 +235,24 @@ export default function App() {
     setBoards((current) => current.filter((item) => item.id !== deletedId));
     if (boardId === deletedId) navigate("/boards");
     notify("Board deleted");
+  }
+  async function colorBoard(id: string, cardColor: BoardListItemDto['cardColor'], version: number) {
+    try {
+      const updated = await boardApi.appearance(id, cardColor, version);
+      setBoards(current => current.map(item => item.id === id && (item.cardColorVersion ?? 0) <= updated.cardColorVersion
+        ? { ...item, cardColor: updated.cardColor, cardColorVersion: updated.cardColorVersion, updatedAt: updated.updatedAt }
+        : item));
+      notify('Board color updated');
+    } catch (cause) {
+      if (cause instanceof AuthApiError && cause.code === 'board_appearance_conflict') {
+        const latest = await boardApi.get(id);
+        setBoards(current => current.map(item => item.id === id && (item.cardColorVersion ?? 0) <= latest.cardColorVersion
+          ? { ...item, ...latest } : item));
+      } else if (cause instanceof AuthApiError && (cause.status === 403 || cause.status === 404)) {
+        await loadBoards(false).catch(() => undefined);
+      }
+      throw cause;
+    }
   }
   async function createBoard(title: string) {
     try {
@@ -267,12 +305,9 @@ export default function App() {
   if (path === "/privacy") return <PrivacyPolicyPage />;
   if (path === "/terms") return <TermsOfServicePage />;
   if (starting)
-    return <div className="wk-startup"><Wordmark /><p role="status">Restoring your session…</p></div>;
+    return <BrandState fullscreen motion="prism" playback={openingMotion.current} label="Restoring your session…" />;
   if (startupBlocked)
-    return <div className="wk-startup"><Wordmark /><h1>Could not restore your session</h1>
-      <p role="alert">{startupError}</p>
-      <Button onClick={() => void initializeSession()}>Try again</Button>
-    </div>;
+    return <BrandRecovery playback={openingMotion.current} reason={startupError} onRetry={() => void initializeSession()} />;
   if (!session && path === "/") return <PublicHome />;
   if (!session)
     return (
@@ -283,7 +318,7 @@ export default function App() {
         onSuccess={(value) => {
           setSession(value);
           setStartupError("");
-          navigate(returnPath.current ?? takeNotificationReturnPath() ?? "/home"); returnPath.current = null; takeNotificationReturnPath();
+          navigate(returnPath.current ?? pendingLibrarySharePath() ?? takeNotificationReturnPath() ?? "/home"); returnPath.current = null; takeNotificationReturnPath();
         }}
       />
     );
@@ -295,11 +330,12 @@ export default function App() {
   ) {
     window.history.replaceState(null, "", "/home");
     queueMicrotask(() => setPath("/home"));
-    return <div className="wk-startup"><Wordmark /><p role="status">Opening your workspace…</p></div>;
+    return <BrandState fullscreen motion="prism" playback={openingMotion.current} label="Opening your workspace…" />;
   }
   return (
     <OnboardingProvider key={session.user.id} ready={boardsReady && !loading && !failure} path={path}>
-    <AppShell
+    <Suspense fallback={<BrandState fullscreen motion="prism" playback={openingMotion.current} label="Opening your workspace…" />}><WorkspaceShell
+      libraryEnabled={true}
       user={session.user}
       boards={boards}
       activeBoardId={boardId}
@@ -307,6 +343,7 @@ export default function App() {
       onCreateBoard={createBoard}
       onRenameBoard={renameBoard}
       onDeleteBoard={deleteBoard}
+      onColorBoard={colorBoard}
       signOut={() => void signOut(false)}
       signOutEverywhere={() => void signOut(true)}
       notify={notify}
@@ -318,7 +355,8 @@ export default function App() {
       <Suspense fallback={<LoadingSkeleton label="Opening page" layout={path === "/calendar" ? "calendar" : path === "/tasks" ? "week" : "list"} />}>
       {path === "/home" ? <DashboardPage user={session.user} boards={boards} boardsLoading={loading} boardsError={failure}
         retryBoards={() => void loadBoards().catch(() => undefined)} navigate={navigate} notify={notify} />
-      : path === "/library" ? <SoonPage area="Library" /> : path === "/library/pictures" ? <SoonPage area="Pictures" /> : path === "/journal" ? <SoonPage area="Journal" /> : path === "/tasks/templates" ? <TemplatesPage notify={notify} navigate={navigate} />
+      : isLibraryPath(path) ? <LibraryRoot accountId={session.user.id} path={path} navigate={navigate} />
+      : path === "/journal" ? <SoonPage area="Journal" /> : path === "/tasks/templates" ? <TemplatesPage notify={notify} navigate={navigate} />
       : path === "/notifications" ? <NotificationsPage navigate={navigate} notify={notify} />
       : path === "/tasks" || path === "/tasks/quick" || taskId ? <TasksPage key={path} notify={notify} openTaskId={taskId}
         initialView={path === "/tasks/quick" ? "inbox" : "week"}
@@ -351,13 +389,14 @@ export default function App() {
           retry={() => void loadBoards().catch(() => undefined)}
           navigate={navigate}
           onRenameBoard={renameBoard}
+          onColorBoard={colorBoard}
           onDeleteBoard={deleteBoard}
           onBoardLimitReached={() => warn("Board limit reached. You can have a maximum of 5 boards.")}
           create={createBoard}
         />
       )}
       </Suspense>
-    </AppShell>
+    </WorkspaceShell></Suspense>
     </OnboardingProvider>
   );
 }

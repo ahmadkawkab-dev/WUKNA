@@ -10,6 +10,8 @@ using Wukna.Features.Tasks;
 using Wukna.Features.Calendar;
 using Wukna.Features.Notifications;
 using Wukna.Features.Chat;
+using Wukna.Features.Library;
+using Wukna.Features.Subscriptions;
 using Wukna.Shared.Data.AppDbContext;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
@@ -20,6 +22,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.SignalR;
 using Wukna.Shared.Health;
+using Wukna.Shared.Errors;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Text;
@@ -32,6 +35,7 @@ if (args is ["--generate-vapid-keys", var keyFile])
 }
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddExceptionHandler<UnexpectedExceptionHandler>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHealthChecks()
@@ -57,6 +61,8 @@ builder.Services.AddSingleton(jwtOptions);
 builder.Services.AddSingleton(googleSettings);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddChatMessages();
+builder.Services.AddPersonalLibrary();
+builder.Services.AddStorageSubscriptions();
 builder.Services.AddOptions<BoardOptions>().BindConfiguration("Board")
     .Validate(options => options.MaxGuests is >= 0 and <= 1000 && options.MembershipWritesPerMinute is >= 1 and <= 10000,
         "Board:MaxGuests must be 0–1000; Board:MembershipWritesPerMinute must be 1–10000.").ValidateOnStart();
@@ -71,6 +77,10 @@ builder.Services.AddSingleton<INoteGeometryPreviewRegistry, NoteGeometryPreviewR
 builder.Services.AddSingleton<INoteEditingRegistry, NoteEditingRegistry>();
 builder.Services.AddSingleton<IBoardCursorRegistry, BoardCursorRegistry>();
 builder.Services.AddSingleton<IBoardRealtimePublisher, BoardRealtimePublisher>();
+// Authorization coordination below is process-local: one serving API process.
+// Session affinity or a SignalR backplane alone does not make revocation safe.
+builder.Services.AddSingleton<BoardGroupCleanupService>();
+builder.Services.AddHostedService(provider => provider.GetRequiredService<BoardGroupCleanupService>());
 builder.Services.AddHostedService<NoteEditingCleanupService>();
 builder.Services.AddHostedService<BoardCursorCleanupService>();
 builder.Services.AddSingleton<IUserIdProvider, SubjectUserIdProvider>();
@@ -236,6 +246,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 var app = builder.Build();
 
    
+app.UseMiddleware<UnexpectedExceptionMiddleware>();
 app.UseForwardedHeaders();
 app.UseSwagger();
 app.UseSwaggerUI();
@@ -244,6 +255,7 @@ app.UseSwaggerUI();
 app.UseStaticFiles();
 app.UseStaticFiles(ProfileImageStaticFiles.Options(app.Services.GetRequiredService<IProfileImageStore>()));
 app.UseRouting();
+app.UseMiddleware<LibraryRequestMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
@@ -265,6 +277,8 @@ app.MapWebPushEndpoints();
 app.MapNotificationEndpoints();
 app.MapNotificationPreferenceEndpoints();
 app.MapChatMessageEndpoints();
+app.MapLibraryEndpoints();
+app.MapStorageSubscriptionEndpoints();
 app.MapHub<ChatHub>(ChatHub.Path, options =>
     options.CloseOnAuthenticationExpiration = true).RequireAuthorization();
 app.MapHub<BoardHub>(BoardHub.Path, options =>

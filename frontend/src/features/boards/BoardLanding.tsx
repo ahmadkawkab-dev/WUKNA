@@ -10,8 +10,10 @@ import type { BoardListItemDto } from "../../api";
 import { AuthApiError, errorMessage } from "../../api";
 import { BrandMark } from "../../components/brand/BrandMark";
 import { Button } from "../../components/ui/Button";
+import { SearchInput } from '../../components/ui/SearchInput';
 import { BoardActionsDialog } from "./BoardActionsDialog";
 import { BoardPreview } from "./BoardPreview";
+import { boardCardTone, type BoardCardTone } from "./boardCardTone";
 
 const MAX_OWNED_BOARDS = 5;
 const LIMIT_WARNING_COOLDOWN_MS = 10_000;
@@ -53,11 +55,13 @@ function BoardCard({
   navigate,
   onRenameBoard,
   onDeleteBoard,
+  onColorBoard,
 }: {
   board: BoardListItemDto;
   navigate: (path: string) => void;
   onRenameBoard: (id: string, title: string) => Promise<void>;
   onDeleteBoard: (id: string) => Promise<void>;
+  onColorBoard: (id: string, color: BoardCardTone | null, version: number) => Promise<void>;
 }) {
   const [actionsOpen, setActionsOpen] = useState(false);
   const titleId = useId();
@@ -71,7 +75,7 @@ function BoardCard({
   ];
 
   return (
-    <div className="wk-board-card-wrap">
+    <div className="wk-board-card-wrap" data-board-id={board.id} data-board-tone={board.cardColor ?? boardCardTone(board.id)}>
     <a
       href={`/boards/${board.id}`}
       className="wk-board-card"
@@ -109,15 +113,13 @@ function BoardCard({
         </span>
       </div>
     </a>
-    {isOwner && (
-      <div className="wk-board-card-actions">
+    {(isOwner || board.canEdit) && <div className="wk-board-card-actions">
         <Button variant="quiet" size="compact" onClick={() => setActionsOpen(true)}
-          aria-label={`Actions for ${board.title}`}><MoreHorizontal size={16} aria-hidden="true" /> Manage board</Button>
-      </div>
-    )}
+          aria-label={`Actions for ${board.title}`}><MoreHorizontal size={16} aria-hidden="true" /> {isOwner ? 'Manage board' : 'Board appearance'}</Button>
+      </div>}
     {actionsOpen && (
       <BoardActionsDialog board={board} onClose={() => setActionsOpen(false)}
-        onRenameBoard={onRenameBoard} onDeleteBoard={onDeleteBoard} />
+        onRenameBoard={onRenameBoard} onDeleteBoard={onDeleteBoard} onColorBoard={onColorBoard} />
     )}
     </div>
   );
@@ -128,17 +130,19 @@ function BoardGrid({
   navigate,
   onRenameBoard,
   onDeleteBoard,
+  onColorBoard,
 }: {
   boards: BoardListItemDto[];
   navigate: (path: string) => void;
   onRenameBoard: (id: string, title: string) => Promise<void>;
   onDeleteBoard: (id: string) => Promise<void>;
+  onColorBoard: (id: string, color: BoardCardTone | null, version: number) => Promise<void>;
 }) {
   return (
     <div className="wk-board-grid">
       {boards.map((board) => (
         <BoardCard key={board.id} board={board} navigate={navigate}
-          onRenameBoard={onRenameBoard} onDeleteBoard={onDeleteBoard} />
+          onRenameBoard={onRenameBoard} onDeleteBoard={onDeleteBoard} onColorBoard={onColorBoard} />
       ))}
     </div>
   );
@@ -169,6 +173,7 @@ export function BoardLanding({
   onBoardLimitReached,
   onRenameBoard,
   onDeleteBoard,
+  onColorBoard,
 }: {
   boards: BoardListItemDto[];
   loading: boolean;
@@ -179,6 +184,7 @@ export function BoardLanding({
   onBoardLimitReached: () => void;
   onRenameBoard: (id: string, title: string) => Promise<void>;
   onDeleteBoard: (id: string) => Promise<void>;
+  onColorBoard: (id: string, color: BoardCardTone | null, version: number) => Promise<void>;
 }) {
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
@@ -289,12 +295,13 @@ export function BoardLanding({
 
         <div className="wk-board-library-toolbar"><div className="wk-board-search">
           <Search size={16} aria-hidden="true" />
-          <input
+          <SearchInput
             type="search"
             value={query}
             aria-label="Search your boards"
             placeholder="Search your boards…"
-            onChange={(event) => setQuery(event.target.value)}
+            onValueChange={setQuery}
+            clearLabel="Clear boards search"
           />
         </div>
           {!loading && !failure && <span className="wk-board-library-summary" role="status">{plural(shown.length, "board")}{normalizedQuery ? " found" : " in your workspace"}</span>}
@@ -331,16 +338,12 @@ export function BoardLanding({
               </div>
               {owned.length > 0 ? (
                 <BoardGrid boards={owned} navigate={navigate}
-                  onRenameBoard={onRenameBoard} onDeleteBoard={onDeleteBoard} />
+                  onRenameBoard={onRenameBoard} onDeleteBoard={onDeleteBoard} onColorBoard={onColorBoard} />
               ) : (
                 <div className="wk-board-state wk-board-state--primary">
                   <BrandMark />
                   <h3>{normalizedQuery ? "No matching boards of your own" : "Your Wukna starts here"}</h3>
-                  <p>{normalizedQuery ? "Try another title to find one of your boards." : "Create your first board and begin gathering ideas."}</p>
-                  {!normalizedQuery && <Button onClick={openCreateForm} aria-disabled={atBoardLimit}>
-                    <Plus size={18} aria-hidden="true" />
-                    Create your first board
-                  </Button>}
+                  <p>{normalizedQuery ? "Try another title to find one of your boards." : "Use New board above to begin gathering ideas."}</p>
                 </div>
               )}
             </section>
@@ -355,7 +358,7 @@ export function BoardLanding({
               </div>
               {shared.length > 0 ? (
                 <BoardGrid boards={shared} navigate={navigate}
-                  onRenameBoard={onRenameBoard} onDeleteBoard={onDeleteBoard} />
+                  onRenameBoard={onRenameBoard} onDeleteBoard={onDeleteBoard} onColorBoard={onColorBoard} />
               ) : (
                 <p className="wk-board-secondary-empty">{normalizedQuery ? "No shared boards match this search." : "Nothing has been shared with you yet."}</p>
               )}

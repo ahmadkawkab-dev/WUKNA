@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { Wordmark } from '../brand/Wordmark';
 
 type BoundaryState = { error: Error | null };
 
@@ -17,6 +18,7 @@ export class AppErrorBoundary extends Component<{ children: ReactNode }, Boundar
     if (this.state.error) {
       return (
         <main className="wk-app-error" role="alert">
+          <Wordmark />
           <h1>This screen could not be opened</h1>
           <p>Something went wrong while opening this screen. Reload Wukna to try again.</p>
           <button type="button" onClick={() => window.location.reload()}>Reload Wukna</button>

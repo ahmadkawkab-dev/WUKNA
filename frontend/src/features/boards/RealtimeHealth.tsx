@@ -1,6 +1,6 @@
-import { Check, CloudOff, RefreshCw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { RealtimeStatus } from "../../realtime/connection";
+import { BrandMark } from '../../components/brand/BrandMark';
 
 export function RealtimeHealth({ status }: { status: RealtimeStatus }) {
   const previous = useRef(status);
@@ -41,7 +41,6 @@ export function RealtimeHealth({ status }: { status: RealtimeStatus }) {
       : status === "connecting"
         ? "Connecting live collaboration…"
         : "Reconnecting…";
-  const Icon = recovered ? Check : status === "disconnected" ? CloudOff : RefreshCw;
 
   return (
     <span
@@ -50,7 +49,7 @@ export function RealtimeHealth({ status }: { status: RealtimeStatus }) {
       aria-live="polite"
       aria-atomic="true"
     >
-      <Icon size={15} aria-hidden="true" />
+      <BrandMark motion={recovered ? 'success' : status === 'connecting' || status === 'reconnecting' ? 'loading' : 'still'} />
       <span>{message}</span>
     </span>
   );

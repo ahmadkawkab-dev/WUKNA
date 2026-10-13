@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Boxes, Plus, Search, Sparkles } from "lucide-react";
 import { errorMessage, planningSettingsApi, taskTemplateApi, type TaskTemplateDto } from "../../api";
 import { Button } from "../../components/ui/Button";
+import { SearchInput } from '../../components/ui/SearchInput';
 import { dateInZone } from "../../date";
 import { TemplatesDialog } from "./TemplatesDialog";
 import "./templates-page.css";
@@ -77,8 +78,8 @@ export function TemplatesPage({ notify, navigate }: { notify: (message: string) 
       <div><span className="wk-templates-eyebrow">Reusable task systems</span><h1 id="wk-templates-title">Templates</h1><p>Start with structure, then make it yours.</p></div>
       <Button aria-haspopup="dialog" onClick={() => setDialogTarget("new")}><Plus size={18} aria-hidden="true" /> Create template</Button>
     </header>
-    <div className="wk-templates-toolbar"><label><Search size={15} aria-hidden="true" /><input value={search}
-      onChange={(event) => setSearch(event.target.value)} placeholder="Search templates" aria-label="Search templates" /></label></div>
+    <div className="wk-templates-toolbar"><div className="wk-templates-search"><Search size={15} aria-hidden="true" /><SearchInput value={search}
+      onValueChange={setSearch} clearLabel="Clear templates search" placeholder="Search templates" aria-label="Search templates" /></div></div>
     {error && <div className="wk-templates-error" role="alert"><p>{error}</p><Button variant="secondary" size="compact" onClick={() => void load()}>Try again</Button></div>}
     {loading && <LoadingSkeleton layout="cards" label="Loading templates…" />}
     {!loading && !error && <div className="wk-templates-layout">
@@ -93,8 +94,7 @@ export function TemplatesPage({ notify, navigate }: { notify: (message: string) 
             <span className="wk-template-card-footer"><em>Personal</em><small>{template.items.length} {template.items.length === 1 ? "task" : "tasks"}</small></span>
           </button>)}</div> : <div className="wk-templates-empty">
             <Boxes size={24} aria-hidden="true" /><h3>{search ? "No matching templates" : "No templates yet"}</h3>
-            <p>{search ? "Try another name." : "Create one to reuse a set of tasks."}</p>
-            {!search && <Button size="compact" onClick={() => setDialogTarget("new")}>Create template</Button>}
+            <p>{search ? "Try another name." : "Use Create template above to reuse a set of tasks."}</p>
           </div>}
         {hasMore && <Button variant="secondary" size="compact" disabled={loadingMore} onClick={() => void loadMore()}>{loadingMore ? "Loading…" : "Load more templates"}</Button>}
       </div>

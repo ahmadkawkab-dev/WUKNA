@@ -8,6 +8,7 @@ using Wukna.Features.Tasks;
 using Wukna.Features.Calendar;
 using Wukna.Features.Notifications;
 using Wukna.Features.Chat;
+using Wukna.Features.Library;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
@@ -47,6 +48,16 @@ public class WuknaDbContext : IdentityUserContext<User, Guid>
     public DbSet<ScheduledChatTask> ScheduledChatTasks => Set<ScheduledChatTask>();
     public DbSet<ChatOutboxEvent> ChatOutboxEvents => Set<ChatOutboxEvent>();
     public DbSet<ChatBlobWork> ChatBlobWork => Set<ChatBlobWork>();
+    public DbSet<LibraryItem> LibraryItems => Set<LibraryItem>();
+    public DbSet<LibraryFolder> LibraryFolders => Set<LibraryFolder>();
+    public DbSet<LibraryAsset> LibraryAssets => Set<LibraryAsset>();
+    public DbSet<LibraryDocument> LibraryDocuments => Set<LibraryDocument>();
+    public DbSet<LibraryVideo> LibraryVideos => Set<LibraryVideo>();
+    public DbSet<LibraryCollection> LibraryCollections => Set<LibraryCollection>();
+    public DbSet<LibraryCollectionItem> LibraryCollectionItems => Set<LibraryCollectionItem>();
+    public DbSet<StorageEntitlement> StorageEntitlements => Set<StorageEntitlement>();
+    public DbSet<StorageReservation> StorageReservations => Set<StorageReservation>();
+    public DbSet<LibraryBlobWork> LibraryBlobWork => Set<LibraryBlobWork>();
 
 
 protected override void OnModelCreating(ModelBuilder builder)
