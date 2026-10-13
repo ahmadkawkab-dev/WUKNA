@@ -1,5 +1,9 @@
 # Production release: planning, board chat, and notifications
 
+For the October 2026 Library/rebranding upgrade from the 16-migration onboarding
+baseline, use [the Library release procedure](LIBRARY_PRODUCTION_RELEASE.md).
+The SQL and baseline below belong to the earlier October 4 release.
+
 Publishing and VM operations are performed by the owner. This is a preparation
 runbook, not a record of commands already executed. The separate release command
 journal records confirmed operations and will be exported to PDF outside the

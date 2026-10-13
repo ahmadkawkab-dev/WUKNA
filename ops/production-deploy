@@ -10,6 +10,11 @@ umask 077
 compose_file=/home/ubuntu/wukna-deploy/compose.production.yaml
 attachments_compose_file=/home/ubuntu/wukna-deploy/compose.attachments.production.yaml
 attachments_marker=/etc/wukna/attachments.enabled
+library_marker=/etc/wukna/library.enabled
+library_compose_file=/home/ubuntu/wukna-deploy/compose.library.production.yaml
+library_services_file=/home/ubuntu/wukna-deploy/compose.library.services.yaml
+library_filer_file=/home/ubuntu/wukna-deploy/ops/library-filer.toml
+library_dir=/etc/wukna/library-storage
 env_file=/etc/wukna/production.env
 docker=/usr/bin/docker
 
@@ -52,6 +57,7 @@ if [[ "$env_owner" != 0 || ( "$env_mode" != 600 && "$env_mode" != 400 ) ]]; then
 fi
 
 compose_files=(-f "$compose_file")
+compose_env_files=(--env-file "$env_file")
 attachments_enabled=false
 if [[ -e "$attachments_marker" || -L "$attachments_marker" ]]; then
   if [[ ! -f "$attachments_marker" || -L "$attachments_marker" ||
@@ -69,6 +75,39 @@ if [[ -e "$attachments_marker" || -L "$attachments_marker" ]]; then
   attachments_enabled=true
 fi
 
+library_enabled=false
+if [[ -e "$library_marker" || -L "$library_marker" ]]; then
+  if [[ ! -f "$library_marker" || -L "$library_marker" ||
+        $(stat -c '%u:%a' "$library_marker") != 0:600 ||
+        $(<"$library_marker") != enabled ]]; then
+    echo "The Library marker must be a root-owned mode 0600 file containing 'enabled'" >&2
+    exit 1
+  fi
+  # Library extends the production scanner even when Chat attachments are disabled.
+  for file in "$library_compose_file" "$library_services_file" "$library_filer_file" "$attachments_compose_file"; do
+    if [[ ! -f "$file" || -L "$file" || $(stat -c '%u:%a' "$file") != 0:644 ]]; then
+      echo "Library requires root-owned mode 0644 regular Compose and filer files: $file" >&2
+      exit 1
+    fi
+  done
+  if [[ ! -d "$library_dir" || -L "$library_dir" || $(stat -c '%u:%a' "$library_dir") != 0:700 ||
+        ! -f "$library_dir/storage.env" || -L "$library_dir/storage.env" ||
+        $(stat -c '%u' "$library_dir/storage.env") != 0 ||
+        ( $(stat -c '%a' "$library_dir/storage.env") != 600 && $(stat -c '%a' "$library_dir/storage.env") != 400 ) ]]; then
+    echo "Library requires a root-owned mode 0700 directory and mode 0600 or 0400 storage.env" >&2
+    exit 1
+  fi
+  # The pinned SeaweedFS entrypoint runs the server as UID/GID 1000.
+  if [[ ! -f "$library_dir/library-s3.json" || -L "$library_dir/library-s3.json" ||
+        $(stat -c '%u:%g:%a' "$library_dir/library-s3.json") != 0:1000:640 ]]; then
+    echo "The Library S3 configuration must be a root:1000 mode 0640 regular file" >&2
+    exit 1
+  fi
+  compose_env_files+=(--env-file "$library_dir/storage.env")
+  compose_files+=(-f "$library_compose_file")
+  library_enabled=true
+fi
+
 exec 9>/run/wukna-deploy.lock
 if ! flock -n 9; then
   echo "Another Wukna deployment is already running" >&2
@@ -79,12 +118,13 @@ compose() {
   /usr/bin/env -i PATH="$PATH" HOME=/root WUKNA_IMAGE_SHA="$sha" \
     "$docker" compose \
     --project-directory /home/ubuntu/wukna-deploy \
-    --env-file "$env_file" \
+    "${compose_env_files[@]}" \
     "${compose_files[@]}" "$@"
 }
 
 compose config --quiet
 echo "Attachment override: $attachments_enabled"
+echo "Library override: $library_enabled"
 
 db_id=$(compose ps --all -q db)
 if [[ -z "$db_id" || $("$docker" inspect -f '{{.State.Health.Status}}' "$db_id") != healthy ]]; then
@@ -114,7 +154,18 @@ if [[ "$mode" == check ]]; then
   exit 0
 fi
 
-if [[ "$attachments_enabled" == true ]]; then
+if [[ "$library_enabled" == true ]]; then
+  echo "Pulling storage, shared scanner, API, and frontend images for commit $sha"
+  compose pull seaweedfs clamd api frontend
+  compose up --detach --no-deps --pull never --wait --wait-timeout 180 seaweedfs
+  storage_id=$(compose ps -q seaweedfs)
+  storage_mount=$("$docker" inspect --format '{{range .Mounts}}{{if eq .Destination "/data"}}{{.Type}} {{.Name}} {{.RW}}{{end}}{{end}}' "$storage_id")
+  if [[ "$storage_mount" != "volume wukna-prod_library_objects true" ]]; then
+    echo "SeaweedFS must retain the wukna-prod_library_objects volume at /data" >&2
+    exit 1
+  fi
+  compose up --detach --no-deps --pull never --wait --wait-timeout 900 clamd
+elif [[ "$attachments_enabled" == true ]]; then
   echo "Pulling scanner, API, and frontend images for commit $sha"
   compose pull clamd api frontend
   compose up --detach --no-deps --pull never --wait --wait-timeout 900 clamd

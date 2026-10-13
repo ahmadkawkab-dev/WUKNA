@@ -1,5 +1,8 @@
 # Personal Library private storage
 
+Production upgrade and the optional deployment-helper configuration are covered
+by [the Library release procedure](LIBRARY_PRODUCTION_RELEASE.md).
+
 Storage implemented in Phase 5; final account/subscription integration completed
 in phases 6–7 on October 11, 2026. Production deployment remains a
 separate, explicitly approved operation. The default API leaves storage disabled
@@ -232,8 +235,9 @@ in shared logs because resolved environment values include credentials.
 The frontend proxy has a Library-transfer-only 20,000,000-byte limit and 300-second
 timeout. Existing Chat/Profile routes retain their smaller proxy ceiling.
 Restart policies, health checks and bounded JSON log rotation are included.
-SeaweedFS is capped at 2 GiB/2 CPUs and ClamAV at 4 GiB/2 CPUs; provision additional
-RAM for API, PostgreSQL and the OS. A configured resource ceiling is not reserved
+SeaweedFS is capped at 2 GiB/2 CPUs and ClamAV at 4 GiB. The development scanner
+also has a 2-CPU limit; production retains Chat's existing scanner limits.
+Provision additional RAM for API, PostgreSQL and the OS. A configured resource ceiling is not reserved
 memory or assurance that a smaller VPS can run the combined stack.
 
 ## Capacity, backup and recovery

@@ -8,6 +8,16 @@ permissions:
   contents: read
 
 jobs:
+  operations:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Check deployment helper syntax
+        run: bash -n ops/production-deploy
+      - name: Test isolated deployment helper
+        run: python3 ops/tests/test_production_deploy.py
+
   backend:
     runs-on: ubuntu-latest
     steps:
@@ -55,7 +65,7 @@ jobs:
         
   publish-images:
     name: Build and publish images
-    needs: [backend, frontend]
+    needs: [backend, frontend, operations]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04-arm
     permissions:
